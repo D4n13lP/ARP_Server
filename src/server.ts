@@ -1,8 +1,13 @@
 // src/server.ts
 import express from 'express'
+import cors from 'cors'
 import colors from 'colors'
 import router from './router.js'
 import db from './config/db.js'
+
+const allowedOrigins = (process.env.CORS_ORIGIN ?? 'https://frontendacabadosrusticospiramides-theta.vercel.app')
+    .split(',')
+    .map(origin => origin.trim())
 
 // Conectar a base de datos
 // OJO: nunca uses db.sync() aquí. Las tablas ya existen (las creaste con
@@ -23,6 +28,9 @@ connectDB()
 
 const server = express()
 
+server.use(cors({
+    origin: allowedOrigins,
+}))
 server.use(express.json())
 server.use('/', router)
 
