@@ -22,7 +22,7 @@ export async function getTotalCashs(req: Request, res: Response) {
 
 export async function getTotalCashById(req: Request, res: Response) {
     try {
-        const item = await TotalCash.findByPk(req.params.totalCashID)
+        const item = await TotalCash.findByPk(req.params.totalCashID as string)
         if (!item) {
             res.status(404).json({ message: 'TotalCash no encontrado' })
             return
@@ -35,7 +35,7 @@ export async function getTotalCashById(req: Request, res: Response) {
 
 export async function updateTotalCash(req: Request, res: Response) {
     try {
-        const item = await TotalCash.findByPk(req.params.totalCashID)
+        const item = await TotalCash.findByPk(req.params.totalCashID as string)
         if (!item) {
             res.status(404).json({ message: 'TotalCash no encontrado' })
             return
@@ -49,7 +49,7 @@ export async function updateTotalCash(req: Request, res: Response) {
 
 export async function deleteTotalCash(req: Request, res: Response) {
     try {
-        const item = await TotalCash.findByPk(req.params.totalCashID)
+        const item = await TotalCash.findByPk(req.params.totalCashID as string)
         if (!item) {
             res.status(404).json({ message: 'TotalCash no encontrado' })
             return

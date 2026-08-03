@@ -22,7 +22,7 @@ export async function getTimeUnits(req: Request, res: Response) {
 
 export async function getTimeUnitById(req: Request, res: Response) {
     try {
-        const item = await TimeUnit.findByPk(req.params.timeunitID)
+        const item = await TimeUnit.findByPk(req.params.timeunitID as string)
         if (!item) {
             res.status(404).json({ message: 'TimeUnit no encontrado' })
             return
@@ -35,7 +35,7 @@ export async function getTimeUnitById(req: Request, res: Response) {
 
 export async function updateTimeUnit(req: Request, res: Response) {
     try {
-        const item = await TimeUnit.findByPk(req.params.timeunitID)
+        const item = await TimeUnit.findByPk(req.params.timeunitID as string)
         if (!item) {
             res.status(404).json({ message: 'TimeUnit no encontrado' })
             return
@@ -49,7 +49,7 @@ export async function updateTimeUnit(req: Request, res: Response) {
 
 export async function deleteTimeUnit(req: Request, res: Response) {
     try {
-        const item = await TimeUnit.findByPk(req.params.timeunitID)
+        const item = await TimeUnit.findByPk(req.params.timeunitID as string)
         if (!item) {
             res.status(404).json({ message: 'TimeUnit no encontrado' })
             return

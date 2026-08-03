@@ -22,7 +22,7 @@ export async function getClients(req: Request, res: Response) {
 
 export async function getClientById(req: Request, res: Response) {
     try {
-        const item = await Client.findByPk(req.params.clientCode)
+        const item = await Client.findByPk(req.params.clientCode as string)
         if (!item) {
             res.status(404).json({ message: 'Client no encontrado' })
             return
@@ -35,7 +35,7 @@ export async function getClientById(req: Request, res: Response) {
 
 export async function updateClient(req: Request, res: Response) {
     try {
-        const item = await Client.findByPk(req.params.clientCode)
+        const item = await Client.findByPk(req.params.clientCode as string)
         if (!item) {
             res.status(404).json({ message: 'Client no encontrado' })
             return
@@ -49,7 +49,7 @@ export async function updateClient(req: Request, res: Response) {
 
 export async function deleteClient(req: Request, res: Response) {
     try {
-        const item = await Client.findByPk(req.params.clientCode)
+        const item = await Client.findByPk(req.params.clientCode as string)
         if (!item) {
             res.status(404).json({ message: 'Client no encontrado' })
             return

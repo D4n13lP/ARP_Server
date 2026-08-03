@@ -22,7 +22,7 @@ export async function getSuppliers(req: Request, res: Response) {
 
 export async function getSupplierById(req: Request, res: Response) {
     try {
-        const item = await Supplier.findByPk(req.params.suppCode, {
+        const item = await Supplier.findByPk(req.params.suppCode as string, {
             include: [Product],
         })
         if (!item) {
@@ -37,7 +37,7 @@ export async function getSupplierById(req: Request, res: Response) {
 
 export async function updateSupplier(req: Request, res: Response) {
     try {
-        const item = await Supplier.findByPk(req.params.suppCode)
+        const item = await Supplier.findByPk(req.params.suppCode as string)
         if (!item) {
             res.status(404).json({ message: 'Supplier no encontrado' })
             return
@@ -51,7 +51,7 @@ export async function updateSupplier(req: Request, res: Response) {
 
 export async function deleteSupplier(req: Request, res: Response) {
     try {
-        const item = await Supplier.findByPk(req.params.suppCode)
+        const item = await Supplier.findByPk(req.params.suppCode as string)
         if (!item) {
             res.status(404).json({ message: 'Supplier no encontrado' })
             return

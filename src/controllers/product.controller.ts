@@ -89,7 +89,7 @@ export async function getProducts(req: Request, res: Response) {
 
 export async function getProductById(req: Request, res: Response) {
     try {
-        const product = await Product.findByPk(req.params.prodCode, {
+        const product = await Product.findByPk(req.params.prodCode as string, {
             include: [Category, ProductUnit, Picture, Promo],
         })
         if (!product) {
@@ -104,7 +104,7 @@ export async function getProductById(req: Request, res: Response) {
 
 export async function updateProduct(req: Request, res: Response) {
     try {
-        const product = await Product.findByPk(req.params.prodCode)
+        const product = await Product.findByPk(req.params.prodCode as string)
         if (!product) {
             res.status(404).json({ message: 'Producto no encontrado' })
             return
@@ -119,7 +119,7 @@ export async function updateProduct(req: Request, res: Response) {
 
 export async function deleteProduct(req: Request, res: Response) {
     try {
-        const product = await Product.findByPk(req.params.prodCode, { include: [Picture] })
+        const product = await Product.findByPk(req.params.prodCode as string, { include: [Picture] })
         if (!product) {
             res.status(404).json({ message: 'Producto no encontrado' })
             return

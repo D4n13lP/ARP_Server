@@ -24,7 +24,7 @@ export async function getInventorys(req: Request, res: Response) {
 
 export async function getInventoryById(req: Request, res: Response) {
     try {
-        const item = await Inventory.findByPk(req.params.inventoryID)
+        const item = await Inventory.findByPk(req.params.inventoryID as string)
         if (!item) {
             res.status(404).json({ message: 'Inventory no encontrado' })
             return
@@ -37,7 +37,7 @@ export async function getInventoryById(req: Request, res: Response) {
 
 export async function updateInventory(req: Request, res: Response) {
     try {
-        const item = await Inventory.findByPk(req.params.inventoryID)
+        const item = await Inventory.findByPk(req.params.inventoryID as string)
         if (!item) {
             res.status(404).json({ message: 'Inventory no encontrado' })
             return
@@ -51,7 +51,7 @@ export async function updateInventory(req: Request, res: Response) {
 
 export async function deleteInventory(req: Request, res: Response) {
     try {
-        const item = await Inventory.findByPk(req.params.inventoryID)
+        const item = await Inventory.findByPk(req.params.inventoryID as string)
         if (!item) {
             res.status(404).json({ message: 'Inventory no encontrado' })
             return

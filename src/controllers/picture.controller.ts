@@ -58,7 +58,7 @@ export async function getPictures(req: Request, res: Response) {
 
 export async function getPictureById(req: Request, res: Response) {
     try {
-        const item = await Picture.findByPk(req.params.pictureID)
+        const item = await Picture.findByPk(req.params.pictureID as string)
         if (!item) {
             res.status(404).json({ message: 'Picture no encontrado' })
             return
@@ -71,7 +71,7 @@ export async function getPictureById(req: Request, res: Response) {
 
 export async function updatePicture(req: Request, res: Response) {
     try {
-        const item = await Picture.findByPk(req.params.pictureID)
+        const item = await Picture.findByPk(req.params.pictureID as string)
         if (!item) {
             res.status(404).json({ message: 'Picture no encontrado' })
             return
@@ -85,7 +85,7 @@ export async function updatePicture(req: Request, res: Response) {
 
 export async function deletePicture(req: Request, res: Response) {
     try {
-        const item = await Picture.findByPk(req.params.pictureID)
+        const item = await Picture.findByPk(req.params.pictureID as string)
         if (!item) {
             res.status(404).json({ message: 'Picture no encontrado' })
             return

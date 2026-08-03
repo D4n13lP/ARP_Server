@@ -22,7 +22,7 @@ export async function getProductUnits(req: Request, res: Response) {
 
 export async function getProductUnitById(req: Request, res: Response) {
     try {
-        const item = await ProductUnit.findByPk(req.params.produnitID)
+        const item = await ProductUnit.findByPk(req.params.produnitID as string)
         if (!item) {
             res.status(404).json({ message: 'ProductUnit no encontrado' })
             return
@@ -35,7 +35,7 @@ export async function getProductUnitById(req: Request, res: Response) {
 
 export async function updateProductUnit(req: Request, res: Response) {
     try {
-        const item = await ProductUnit.findByPk(req.params.produnitID)
+        const item = await ProductUnit.findByPk(req.params.produnitID as string)
         if (!item) {
             res.status(404).json({ message: 'ProductUnit no encontrado' })
             return
@@ -49,7 +49,7 @@ export async function updateProductUnit(req: Request, res: Response) {
 
 export async function deleteProductUnit(req: Request, res: Response) {
     try {
-        const item = await ProductUnit.findByPk(req.params.produnitID)
+        const item = await ProductUnit.findByPk(req.params.produnitID as string)
         if (!item) {
             res.status(404).json({ message: 'ProductUnit no encontrado' })
             return

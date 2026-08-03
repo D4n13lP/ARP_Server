@@ -35,7 +35,7 @@ export async function getUsers(req: Request, res: Response) {
 
 export async function getUserById(req: Request, res: Response) {
     try {
-        const user = await User.findByPk(req.params.userID, SIN_PASSWORD)
+        const user = await User.findByPk(req.params.userID as string, SIN_PASSWORD)
         if (!user) {
             res.status(404).json({ message: 'Usuario no encontrado' })
             return
@@ -48,7 +48,7 @@ export async function getUserById(req: Request, res: Response) {
 
 export async function updateUser(req: Request, res: Response) {
     try {
-        const user = await User.findByPk(req.params.userID)
+        const user = await User.findByPk(req.params.userID as string)
         if (!user) {
             res.status(404).json({ message: 'Usuario no encontrado' })
             return
@@ -69,7 +69,7 @@ export async function updateUser(req: Request, res: Response) {
 
 export async function deleteUser(req: Request, res: Response) {
     try {
-        const user = await User.findByPk(req.params.userID)
+        const user = await User.findByPk(req.params.userID as string)
         if (!user) {
             res.status(404).json({ message: 'Usuario no encontrado' })
             return

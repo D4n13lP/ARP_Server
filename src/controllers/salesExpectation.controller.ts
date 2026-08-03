@@ -22,7 +22,7 @@ export async function getSalesExpectations(req: Request, res: Response) {
 
 export async function getSalesExpectationById(req: Request, res: Response) {
     try {
-        const item = await SalesExpectation.findByPk(req.params.expectationID)
+        const item = await SalesExpectation.findByPk(req.params.expectationID as string)
         if (!item) {
             res.status(404).json({ message: 'SalesExpectation no encontrado' })
             return
@@ -35,7 +35,7 @@ export async function getSalesExpectationById(req: Request, res: Response) {
 
 export async function updateSalesExpectation(req: Request, res: Response) {
     try {
-        const item = await SalesExpectation.findByPk(req.params.expectationID)
+        const item = await SalesExpectation.findByPk(req.params.expectationID as string)
         if (!item) {
             res.status(404).json({ message: 'SalesExpectation no encontrado' })
             return
@@ -49,7 +49,7 @@ export async function updateSalesExpectation(req: Request, res: Response) {
 
 export async function deleteSalesExpectation(req: Request, res: Response) {
     try {
-        const item = await SalesExpectation.findByPk(req.params.expectationID)
+        const item = await SalesExpectation.findByPk(req.params.expectationID as string)
         if (!item) {
             res.status(404).json({ message: 'SalesExpectation no encontrado' })
             return

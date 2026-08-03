@@ -22,7 +22,7 @@ export async function getPromos(req: Request, res: Response) {
 
 export async function getPromoById(req: Request, res: Response) {
     try {
-        const item = await Promo.findByPk(req.params.discountID)
+        const item = await Promo.findByPk(req.params.discountID as string)
         if (!item) {
             res.status(404).json({ message: 'Promo no encontrado' })
             return
@@ -35,7 +35,7 @@ export async function getPromoById(req: Request, res: Response) {
 
 export async function updatePromo(req: Request, res: Response) {
     try {
-        const item = await Promo.findByPk(req.params.discountID)
+        const item = await Promo.findByPk(req.params.discountID as string)
         if (!item) {
             res.status(404).json({ message: 'Promo no encontrado' })
             return
@@ -49,7 +49,7 @@ export async function updatePromo(req: Request, res: Response) {
 
 export async function deletePromo(req: Request, res: Response) {
     try {
-        const item = await Promo.findByPk(req.params.discountID)
+        const item = await Promo.findByPk(req.params.discountID as string)
         if (!item) {
             res.status(404).json({ message: 'Promo no encontrado' })
             return

@@ -22,7 +22,7 @@ export async function getCouriers(req: Request, res: Response) {
 
 export async function getCourierById(req: Request, res: Response) {
     try {
-        const item = await Courier.findByPk(req.params.courierID)
+        const item = await Courier.findByPk(req.params.courierID as string)
         if (!item) {
             res.status(404).json({ message: 'Courier no encontrado' })
             return
@@ -35,7 +35,7 @@ export async function getCourierById(req: Request, res: Response) {
 
 export async function updateCourier(req: Request, res: Response) {
     try {
-        const item = await Courier.findByPk(req.params.courierID)
+        const item = await Courier.findByPk(req.params.courierID as string)
         if (!item) {
             res.status(404).json({ message: 'Courier no encontrado' })
             return
@@ -49,7 +49,7 @@ export async function updateCourier(req: Request, res: Response) {
 
 export async function deleteCourier(req: Request, res: Response) {
     try {
-        const item = await Courier.findByPk(req.params.courierID)
+        const item = await Courier.findByPk(req.params.courierID as string)
         if (!item) {
             res.status(404).json({ message: 'Courier no encontrado' })
             return

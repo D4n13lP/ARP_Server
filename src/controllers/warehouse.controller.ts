@@ -22,7 +22,7 @@ export async function getWarehouses(req: Request, res: Response) {
 
 export async function getWarehouseById(req: Request, res: Response) {
     try {
-        const item = await Warehouse.findByPk(req.params.whID)
+        const item = await Warehouse.findByPk(req.params.whID as string)
         if (!item) {
             res.status(404).json({ message: 'Warehouse no encontrado' })
             return
@@ -35,7 +35,7 @@ export async function getWarehouseById(req: Request, res: Response) {
 
 export async function updateWarehouse(req: Request, res: Response) {
     try {
-        const item = await Warehouse.findByPk(req.params.whID)
+        const item = await Warehouse.findByPk(req.params.whID as string)
         if (!item) {
             res.status(404).json({ message: 'Warehouse no encontrado' })
             return
@@ -49,7 +49,7 @@ export async function updateWarehouse(req: Request, res: Response) {
 
 export async function deleteWarehouse(req: Request, res: Response) {
     try {
-        const item = await Warehouse.findByPk(req.params.whID)
+        const item = await Warehouse.findByPk(req.params.whID as string)
         if (!item) {
             res.status(404).json({ message: 'Warehouse no encontrado' })
             return

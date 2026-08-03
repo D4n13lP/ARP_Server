@@ -22,7 +22,7 @@ export async function getTransDetails(req: Request, res: Response) {
 
 export async function getTransDetailById(req: Request, res: Response) {
     try {
-        const item = await TransDetail.findByPk(req.params.transDetailID)
+        const item = await TransDetail.findByPk(req.params.transDetailID as string)
         if (!item) {
             res.status(404).json({ message: 'TransDetail no encontrado' })
             return
@@ -35,7 +35,7 @@ export async function getTransDetailById(req: Request, res: Response) {
 
 export async function updateTransDetail(req: Request, res: Response) {
     try {
-        const item = await TransDetail.findByPk(req.params.transDetailID)
+        const item = await TransDetail.findByPk(req.params.transDetailID as string)
         if (!item) {
             res.status(404).json({ message: 'TransDetail no encontrado' })
             return
@@ -49,7 +49,7 @@ export async function updateTransDetail(req: Request, res: Response) {
 
 export async function deleteTransDetail(req: Request, res: Response) {
     try {
-        const item = await TransDetail.findByPk(req.params.transDetailID)
+        const item = await TransDetail.findByPk(req.params.transDetailID as string)
         if (!item) {
             res.status(404).json({ message: 'TransDetail no encontrado' })
             return

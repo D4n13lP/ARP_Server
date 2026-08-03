@@ -31,7 +31,7 @@ export async function getTransactions(req: Request, res: Response) {
 
 export async function getTransactionById(req: Request, res: Response) {
     try {
-        const transaction = await Transaction.findByPk(req.params.transactionID, {
+        const transaction = await Transaction.findByPk(req.params.transactionID as string, {
             include: [Client, TransDetail],
         })
         if (!transaction) {
@@ -46,7 +46,7 @@ export async function getTransactionById(req: Request, res: Response) {
 
 export async function updateTransaction(req: Request, res: Response) {
     try {
-        const transaction = await Transaction.findByPk(req.params.transactionID)
+        const transaction = await Transaction.findByPk(req.params.transactionID as string)
         if (!transaction) {
             res.status(404).json({ message: 'Transacción no encontrada' })
             return
@@ -64,7 +64,7 @@ export async function updateTransaction(req: Request, res: Response) {
 
 export async function deleteTransaction(req: Request, res: Response) {
     try {
-        const transaction = await Transaction.findByPk(req.params.transactionID)
+        const transaction = await Transaction.findByPk(req.params.transactionID as string)
         if (!transaction) {
             res.status(404).json({ message: 'Transacción no encontrada' })
             return

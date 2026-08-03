@@ -22,7 +22,7 @@ export async function getInventoryAdjustments(req: Request, res: Response) {
 
 export async function getInventoryAdjustmentById(req: Request, res: Response) {
     try {
-        const item = await InventoryAdjustment.findByPk(req.params.adjustID)
+        const item = await InventoryAdjustment.findByPk(req.params.adjustID as string)
         if (!item) {
             res.status(404).json({ message: 'InventoryAdjustment no encontrado' })
             return
@@ -35,7 +35,7 @@ export async function getInventoryAdjustmentById(req: Request, res: Response) {
 
 export async function updateInventoryAdjustment(req: Request, res: Response) {
     try {
-        const item = await InventoryAdjustment.findByPk(req.params.adjustID)
+        const item = await InventoryAdjustment.findByPk(req.params.adjustID as string)
         if (!item) {
             res.status(404).json({ message: 'InventoryAdjustment no encontrado' })
             return
@@ -49,7 +49,7 @@ export async function updateInventoryAdjustment(req: Request, res: Response) {
 
 export async function deleteInventoryAdjustment(req: Request, res: Response) {
     try {
-        const item = await InventoryAdjustment.findByPk(req.params.adjustID)
+        const item = await InventoryAdjustment.findByPk(req.params.adjustID as string)
         if (!item) {
             res.status(404).json({ message: 'InventoryAdjustment no encontrado' })
             return

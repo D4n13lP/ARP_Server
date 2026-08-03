@@ -22,7 +22,7 @@ export async function getPaymentHistorys(req: Request, res: Response) {
 
 export async function getPaymentHistoryById(req: Request, res: Response) {
     try {
-        const item = await PaymentHistory.findByPk(req.params.pymntHistryID)
+        const item = await PaymentHistory.findByPk(req.params.pymntHistryID as string)
         if (!item) {
             res.status(404).json({ message: 'PaymentHistory no encontrado' })
             return
@@ -35,7 +35,7 @@ export async function getPaymentHistoryById(req: Request, res: Response) {
 
 export async function updatePaymentHistory(req: Request, res: Response) {
     try {
-        const item = await PaymentHistory.findByPk(req.params.pymntHistryID)
+        const item = await PaymentHistory.findByPk(req.params.pymntHistryID as string)
         if (!item) {
             res.status(404).json({ message: 'PaymentHistory no encontrado' })
             return
@@ -49,7 +49,7 @@ export async function updatePaymentHistory(req: Request, res: Response) {
 
 export async function deletePaymentHistory(req: Request, res: Response) {
     try {
-        const item = await PaymentHistory.findByPk(req.params.pymntHistryID)
+        const item = await PaymentHistory.findByPk(req.params.pymntHistryID as string)
         if (!item) {
             res.status(404).json({ message: 'PaymentHistory no encontrado' })
             return

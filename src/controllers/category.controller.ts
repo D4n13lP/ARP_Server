@@ -26,7 +26,7 @@ export async function getCategorys(req: Request, res: Response) {
 
 export async function getCategoryById(req: Request, res: Response) {
     try {
-        const item = await Category.findByPk(req.params.categoryID)
+        const item = await Category.findByPk(req.params.categoryID as string)
         if (!item) {
             res.status(404).json({ message: 'Category no encontrado' })
             return
@@ -39,7 +39,7 @@ export async function getCategoryById(req: Request, res: Response) {
 
 export async function updateCategory(req: Request, res: Response) {
     try {
-        const item = await Category.findByPk(req.params.categoryID)
+        const item = await Category.findByPk(req.params.categoryID as string)
         if (!item) {
             res.status(404).json({ message: 'Category no encontrado' })
             return
@@ -57,7 +57,7 @@ export async function updateCategory(req: Request, res: Response) {
 
 export async function deleteCategory(req: Request, res: Response) {
     try {
-        const item = await Category.findByPk(req.params.categoryID)
+        const item = await Category.findByPk(req.params.categoryID as string)
         if (!item) {
             res.status(404).json({ message: 'Category no encontrado' })
             return

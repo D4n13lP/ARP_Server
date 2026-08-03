@@ -22,7 +22,7 @@ export async function getTransDiscounts(req: Request, res: Response) {
 
 export async function getTransDiscountById(req: Request, res: Response) {
     try {
-        const item = await TransDiscount.findByPk(req.params.transDiscountID)
+        const item = await TransDiscount.findByPk(req.params.transDiscountID as string)
         if (!item) {
             res.status(404).json({ message: 'TransDiscount no encontrado' })
             return
@@ -35,7 +35,7 @@ export async function getTransDiscountById(req: Request, res: Response) {
 
 export async function updateTransDiscount(req: Request, res: Response) {
     try {
-        const item = await TransDiscount.findByPk(req.params.transDiscountID)
+        const item = await TransDiscount.findByPk(req.params.transDiscountID as string)
         if (!item) {
             res.status(404).json({ message: 'TransDiscount no encontrado' })
             return
@@ -49,7 +49,7 @@ export async function updateTransDiscount(req: Request, res: Response) {
 
 export async function deleteTransDiscount(req: Request, res: Response) {
     try {
-        const item = await TransDiscount.findByPk(req.params.transDiscountID)
+        const item = await TransDiscount.findByPk(req.params.transDiscountID as string)
         if (!item) {
             res.status(404).json({ message: 'TransDiscount no encontrado' })
             return

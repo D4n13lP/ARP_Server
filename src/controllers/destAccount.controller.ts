@@ -22,7 +22,7 @@ export async function getDestAccounts(req: Request, res: Response) {
 
 export async function getDestAccountById(req: Request, res: Response) {
     try {
-        const item = await DestAccount.findByPk(req.params.clabe)
+        const item = await DestAccount.findByPk(req.params.clabe as string)
         if (!item) {
             res.status(404).json({ message: 'DestAccount no encontrado' })
             return
@@ -35,7 +35,7 @@ export async function getDestAccountById(req: Request, res: Response) {
 
 export async function updateDestAccount(req: Request, res: Response) {
     try {
-        const item = await DestAccount.findByPk(req.params.clabe)
+        const item = await DestAccount.findByPk(req.params.clabe as string)
         if (!item) {
             res.status(404).json({ message: 'DestAccount no encontrado' })
             return
@@ -49,7 +49,7 @@ export async function updateDestAccount(req: Request, res: Response) {
 
 export async function deleteDestAccount(req: Request, res: Response) {
     try {
-        const item = await DestAccount.findByPk(req.params.clabe)
+        const item = await DestAccount.findByPk(req.params.clabe as string)
         if (!item) {
             res.status(404).json({ message: 'DestAccount no encontrado' })
             return

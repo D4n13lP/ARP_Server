@@ -22,7 +22,7 @@ export async function getCashs(req: Request, res: Response) {
 
 export async function getCashById(req: Request, res: Response) {
     try {
-        const item = await Cash.findByPk(req.params.cashID)
+        const item = await Cash.findByPk(req.params.cashID as string)
         if (!item) {
             res.status(404).json({ message: 'Cash no encontrado' })
             return
@@ -35,7 +35,7 @@ export async function getCashById(req: Request, res: Response) {
 
 export async function updateCash(req: Request, res: Response) {
     try {
-        const item = await Cash.findByPk(req.params.cashID)
+        const item = await Cash.findByPk(req.params.cashID as string)
         if (!item) {
             res.status(404).json({ message: 'Cash no encontrado' })
             return
@@ -49,7 +49,7 @@ export async function updateCash(req: Request, res: Response) {
 
 export async function deleteCash(req: Request, res: Response) {
     try {
-        const item = await Cash.findByPk(req.params.cashID)
+        const item = await Cash.findByPk(req.params.cashID as string)
         if (!item) {
             res.status(404).json({ message: 'Cash no encontrado' })
             return

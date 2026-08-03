@@ -22,7 +22,7 @@ export async function getYearlyFoliosControls(req: Request, res: Response) {
 
 export async function getYearlyFoliosControlById(req: Request, res: Response) {
     try {
-        const item = await YearlyFoliosControl.findByPk(req.params.year)
+        const item = await YearlyFoliosControl.findByPk(req.params.year as string)
         if (!item) {
             res.status(404).json({ message: 'YearlyFoliosControl no encontrado' })
             return
@@ -35,7 +35,7 @@ export async function getYearlyFoliosControlById(req: Request, res: Response) {
 
 export async function updateYearlyFoliosControl(req: Request, res: Response) {
     try {
-        const item = await YearlyFoliosControl.findByPk(req.params.year)
+        const item = await YearlyFoliosControl.findByPk(req.params.year as string)
         if (!item) {
             res.status(404).json({ message: 'YearlyFoliosControl no encontrado' })
             return
@@ -49,7 +49,7 @@ export async function updateYearlyFoliosControl(req: Request, res: Response) {
 
 export async function deleteYearlyFoliosControl(req: Request, res: Response) {
     try {
-        const item = await YearlyFoliosControl.findByPk(req.params.year)
+        const item = await YearlyFoliosControl.findByPk(req.params.year as string)
         if (!item) {
             res.status(404).json({ message: 'YearlyFoliosControl no encontrado' })
             return
