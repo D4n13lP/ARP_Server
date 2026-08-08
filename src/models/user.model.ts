@@ -3,6 +3,8 @@ import { BelongsToMany, Column, DataType, Default, HasMany, Model, PrimaryKey, T
 import { TotalCash } from './totalCash.model.js';
 import { TransUser } from './transUser.model.js';
 import { Transaction } from './transaction.model.js';
+import { EmailVerificationToken } from './emailVerificationToken.model.js';
+import { PasswordResetToken } from './passwordResetToken.model.js';
 
 @Table({ tableName: 'user', timestamps: false })
 export class User extends Model {
@@ -26,6 +28,21 @@ export class User extends Model {
   @Column({ type: DataType.BOOLEAN, defaultValue: true })
   declare isActive: boolean;
 
+  @Column({ type: DataType.BOOLEAN, allowNull: false, defaultValue: false })
+  declare isEmailVerified: boolean;
+
+  @Column({ type: DataType.STRING(150), allowNull: true, unique: true })
+  declare recoveryEmail: string | null;
+
+  // Identificador corto y memorizable, solo de referencia (gafete, decirlo de
+  // palabra). No es la llave primaria: userID (UUID) sigue siendo la que usan
+  // transUser, totalCash y las tablas de tokens. Lo genera el backend solo.
+  @Column({ type: DataType.STRING(9), allowNull: false, unique: true })
+  declare employeeCode: string;
+
+  @Column({ type: DataType.STRING(20), allowNull: true })
+  declare phone: string | null;
+
   @Column({ type: DataType.DATE })
   declare createdAt: Date;
 
@@ -46,5 +63,11 @@ export class User extends Model {
 
   @BelongsToMany(() => Transaction, () => TransUser)
   declare transactions?: Transaction[];
+
+  @HasMany(() => EmailVerificationToken)
+  declare emailVerificationTokens?: EmailVerificationToken[];
+
+  @HasMany(() => PasswordResetToken)
+  declare passwordResetTokens?: PasswordResetToken[];
 
 }

@@ -1,5 +1,6 @@
 // src/router.ts
 import { Router } from 'express'
+import authRoutes from './routes/auth.routes.js'
 import cashRoutes from './routes/cash.routes.js'
 import categoryRoutes from './routes/category.routes.js'
 import clientRoutes from './routes/client.routes.js'
@@ -8,11 +9,14 @@ import dashboardRoutes from './routes/dashboard.routes.js'
 import destAccountRoutes from './routes/destAccount.routes.js'
 import inventoryRoutes from './routes/inventory.routes.js'
 import inventoryAdjustmentRoutes from './routes/inventoryAdjustment.routes.js'
+import moduleRoutes from './routes/module.routes.js'
 import paymentHistoryRoutes from './routes/paymentHistory.routes.js'
+import permissionRoutes from './routes/permission.routes.js'
 import pictureRoutes from './routes/picture.routes.js'
 import productUnitRoutes from './routes/productUnit.routes.js'
 import productRoutes from './routes/product.routes.js'
 import promoRoutes from './routes/promo.routes.js'
+import rolePermissionRoutes from './routes/rolePermission.routes.js'
 import salesExpectationRoutes from './routes/salesExpectation.routes.js'
 import suppProdRoutes from './routes/suppProd.routes.js'
 import supplierRoutes from './routes/supplier.routes.js'
@@ -30,6 +34,7 @@ import yearlyFoliosControlRoutes from './routes/yearlyFoliosControl.routes.js'
 
 const router = Router()
 
+router.use('/api/auth', authRoutes)
 router.use('/api/cash', cashRoutes)
 router.use('/api/categories', categoryRoutes)
 router.use('/api/clients', clientRoutes)
@@ -38,11 +43,14 @@ router.use('/api/dashboard', dashboardRoutes)
 router.use('/api/dest-accounts', destAccountRoutes)
 router.use('/api/inventories', inventoryRoutes)
 router.use('/api/inventory-adjustments', inventoryAdjustmentRoutes)
+router.use('/api/modules', moduleRoutes)
 router.use('/api/payment-histories', paymentHistoryRoutes)
+router.use('/api/permissions', permissionRoutes)
 router.use('/api/pictures', pictureRoutes)
 router.use('/api/product-units', productUnitRoutes)
 router.use('/api/products', productRoutes)
 router.use('/api/promos', promoRoutes)
+router.use('/api/role-permissions', rolePermissionRoutes)
 router.use('/api/sales-expectations', salesExpectationRoutes)
 router.use('/api/supp-prods', suppProdRoutes)
 router.use('/api/suppliers', supplierRoutes)
