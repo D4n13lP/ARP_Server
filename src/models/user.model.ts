@@ -5,6 +5,7 @@ import { TransUser } from './transUser.model.js';
 import { Transaction } from './transaction.model.js';
 import { EmailVerificationToken } from './emailVerificationToken.model.js';
 import { PasswordResetToken } from './passwordResetToken.model.js';
+import { UserPermission } from './userPermission.model.js';
 
 @Table({ tableName: 'user', timestamps: false })
 export class User extends Model {
@@ -69,5 +70,8 @@ export class User extends Model {
 
   @HasMany(() => PasswordResetToken)
   declare passwordResetTokens?: PasswordResetToken[];
+
+  @HasMany(() => UserPermission)
+  declare userPermissions?: UserPermission[];
 
 }

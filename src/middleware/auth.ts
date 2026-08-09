@@ -1,7 +1,7 @@
 // src/middleware/auth.ts
 import type { NextFunction, Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
-import { Module, RolePermission } from '../models/index.js'
+import { Module, UserPermission } from '../models/index.js'
 
 const JWT_SECRET = process.env.JWT_SECRET as string
 
@@ -53,8 +53,10 @@ const ACTION_COLUMN: Record<PermissionAction, 'canView' | 'canCreate' | 'canEdit
     delete: 'canDelete',
 }
 
-// Consulta rolePermission para el userType de la sesión + el moduleKey dado, y exige
-// que la columna correspondiente a `action` sea true. Usar después de authenticateToken.
+// Consulta userPermission para la persona de la sesión (no su rol) + el moduleKey
+// dado, y exige que la columna correspondiente a `action` sea true. Los permisos
+// son por individuo (ver contextoMD/migracion_permisos_individuales.sql) — dos
+// usuarios del mismo userType pueden tener accesos distintos. Usar después de authenticateToken.
 export function checkPermission(moduleKey: string, action: PermissionAction) {
     const column = ACTION_COLUMN[action]
 
@@ -66,15 +68,15 @@ export function checkPermission(moduleKey: string, action: PermissionAction) {
             }
 
             // El admin siempre tiene acceso total, incluso si un módulo nuevo aún
-            // no tiene fila en rolePermission (evita que un módulo recién creado
+            // no tiene fila individual sembrada (evita que un módulo recién creado
             // deje al admin fuera hasta que alguien lo seedee a mano).
             if (req.user.userType === 'admin') {
                 next()
                 return
             }
 
-            const permission = await RolePermission.findOne({
-                where: { userType: req.user.userType },
+            const permission = await UserPermission.findOne({
+                where: { userID: req.user.userID },
                 include: [{ model: Module, where: { moduleKey }, attributes: [] }],
             })
 

@@ -7,6 +7,7 @@ import db from '../config/db.js'
 import { User, EmailVerificationToken, PasswordResetToken } from '../models/index.js'
 import { sendVerificationEmail, sendResetEmail, sendWelcomeEmail } from '../utils/mailer.js'
 import { generateUniqueEmployeeCode } from '../utils/employeeCode.js'
+import { seedUserPermissions } from '../utils/seedUserPermissions.js'
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000 // 24h
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000 // 1h
@@ -65,6 +66,10 @@ export async function register(req: Request, res: Response) {
                 },
                 { transaction: t },
             )
+
+            // Copia la plantilla de permisos de su rol como punto de partida
+            // individual y editable (ver contextoMD/migracion_permisos_individuales.sql).
+            await seedUserPermissions(created.userID, userType, t)
 
             await EmailVerificationToken.create(
                 { userID: created.userID, tokenHash, expiresAt },

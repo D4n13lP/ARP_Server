@@ -2,8 +2,9 @@
 import type { Request, Response } from 'express'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
-import { User } from '../models/index.js'
+import { User, UserPermission } from '../models/index.js'
 import { generateUniqueEmployeeCode } from '../utils/employeeCode.js'
+import { seedUserPermissions } from '../utils/seedUserPermissions.js'
 
 const JWT_SECRET = process.env.JWT_SECRET as string
 
@@ -17,6 +18,7 @@ export async function createUser(req: Request, res: Response) {
         const hashedPassword = await bcrypt.hash(password, 10)
         const employeeCode = await generateUniqueEmployeeCode()
         const user = await User.create({ userName, email, password: hashedPassword, userType, employeeCode, phone: phone || null })
+        await seedUserPermissions(user.userID, userType)
 
         const { password: _omit, ...safeUser } = user.toJSON() as any
         res.status(201).json(safeUser)
@@ -133,6 +135,45 @@ export async function promoteUser(req: Request, res: Response) {
             return
         }
         await user.update({ userType: 'admin' })
+        const { password: _omit, ...safeUser } = user.toJSON() as any
+        res.json(safeUser)
+    } catch (error: any) {
+        res.status(400).json({ message: error.message })
+    }
+}
+
+// PUT /users/:userID/demote — regresa a un admin a 'seller'. Protegido con
+// authenticateToken + authorizeRoles('admin'). Nunca deja al sistema sin
+// ningún admin: si el usuario objetivo es el último admin, rechaza la baja
+// (ver contextoMD/CONTEXTO_PERMISOS_AUTH.md, sección 5).
+export async function demoteUser(req: Request, res: Response) {
+    try {
+        const user = await User.findByPk(req.params.userID as string)
+        if (!user) {
+            res.status(404).json({ message: 'Usuario no encontrado' })
+            return
+        }
+        if (user.userType !== 'admin') {
+            res.status(400).json({ message: 'Este usuario ya no es admin' })
+            return
+        }
+
+        const adminCount = await User.count({ where: { userType: 'admin' } })
+        if (adminCount <= 1) {
+            res.status(409).json({ message: 'No puedes quitar al último admin del sistema' })
+            return
+        }
+
+        await user.update({ userType: 'seller' })
+
+        // Red de seguridad: si nunca tuvo permisos individuales sembrados (p. ej.
+        // el primer admin del sistema, que nunca pasó por 'seller'), le damos un
+        // punto de partida ahora — sin esto quedaría sin acceso a nada.
+        const existingCount = await UserPermission.count({ where: { userID: user.userID } })
+        if (existingCount === 0) {
+            await seedUserPermissions(user.userID, 'seller')
+        }
+
         const { password: _omit, ...safeUser } = user.toJSON() as any
         res.json(safeUser)
     } catch (error: any) {

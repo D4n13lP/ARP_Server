@@ -29,6 +29,7 @@ import transDiscountRoutes from './routes/transDiscount.routes.js'
 import transUserRoutes from './routes/transUser.routes.js'
 import transactionRoutes from './routes/transaction.routes.js'
 import userRoutes from './routes/user.routes.js'
+import userPermissionRoutes from './routes/userPermission.routes.js'
 import warehouseRoutes from './routes/warehouse.routes.js'
 import yearlyFoliosControlRoutes from './routes/yearlyFoliosControl.routes.js'
 
@@ -63,6 +64,7 @@ router.use('/api/trans-discounts', transDiscountRoutes)
 router.use('/api/trans-users', transUserRoutes)
 router.use('/api/transactions', transactionRoutes)
 router.use('/api/users', userRoutes)
+router.use('/api/user-permissions', userPermissionRoutes)
 router.use('/api/warehouses', warehouseRoutes)
 router.use('/api/yearly-folios-control', yearlyFoliosControlRoutes)
 

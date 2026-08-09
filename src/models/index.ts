@@ -26,5 +26,6 @@ export * from './transDiscount.model.js';
 export * from './transUser.model.js';
 export * from './transaction.model.js';
 export * from './user.model.js';
+export * from './userPermission.model.js';
 export * from './warehouse.model.js';
 export * from './yearlyFoliosControl.model.js';
