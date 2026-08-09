@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken'
 import { User, UserPermission } from '../models/index.js'
 import { generateUniqueEmployeeCode } from '../utils/employeeCode.js'
 import { seedUserPermissions } from '../utils/seedUserPermissions.js'
+import cloudinary from '../config/cloudinary.js'
 
 const JWT_SECRET = process.env.JWT_SECRET as string
 
@@ -33,7 +34,11 @@ export async function createUser(req: Request, res: Response) {
 
 export async function getUsers(req: Request, res: Response) {
     try {
-        const users = await User.findAll(SIN_PASSWORD)
+        const where: Record<string, unknown> = {}
+        if (req.query.isAllowed !== undefined) {
+            where.isAllowed = req.query.isAllowed === 'true'
+        }
+        const users = await User.findAll({ ...SIN_PASSWORD, where })
         res.json(users)
     } catch (error: any) {
         res.status(500).json({ message: error.message })
@@ -48,6 +53,75 @@ export async function getUserById(req: Request, res: Response) {
             return
         }
         res.json(user)
+    } catch (error: any) {
+        res.status(500).json({ message: error.message })
+    }
+}
+
+// PUT /users/me — el propio usuario autenticado edita su nombre y/o teléfono.
+// A propósito NO incluye email/password/userType/isAllowed/employeeCode: cambiar
+// el correo principal requeriría re-verificarlo (no implementado), y el resto
+// son campos que solo un admin debe poder tocar (vía /promote, /demote, /allow).
+export async function updateMe(req: Request, res: Response) {
+    try {
+        const user = await User.findByPk(req.user!.userID)
+        if (!user) {
+            res.status(404).json({ message: 'Usuario no encontrado' })
+            return
+        }
+
+        const { userName, phone } = req.body
+        const updates: Record<string, unknown> = {}
+        if (typeof userName === 'string' && userName.trim()) updates.userName = userName.trim()
+        if (typeof phone === 'string') updates.phone = phone.trim() || null
+
+        await user.update(updates)
+        const { password: _omit, ...safeUser } = user.toJSON() as any
+        res.json(safeUser)
+    } catch (error: any) {
+        res.status(400).json({ message: error.message })
+    }
+}
+
+// PUT /users/me/avatar — sube/reemplaza la foto de perfil del usuario autenticado.
+// multipart/form-data, campo "image" (vía multer, ver routes). Mismo mecanismo
+// que las fotos de producto (picture.controller.ts), pero 1 a 1 con el usuario
+// en vez de guardarse como registros de Picture aparte.
+export async function uploadAvatar(req: Request, res: Response) {
+    try {
+        if (!req.file) {
+            res.status(400).json({ message: 'No se recibió ninguna imagen' })
+            return
+        }
+
+        const user = await User.findByPk(req.user!.userID)
+        if (!user) {
+            res.status(404).json({ message: 'Usuario no encontrado' })
+            return
+        }
+
+        const result = await new Promise<{ public_id: string; secure_url: string }>((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+                { folder: 'acabados-rusticos-piramides/avatars' },
+                (error, result) => {
+                    if (error || !result) {
+                        reject(error || new Error('Cloudinary no regresó resultado'))
+                        return
+                    }
+                    resolve(result)
+                },
+            )
+            stream.end(req.file!.buffer)
+        })
+
+        // Borra la imagen anterior de Cloudinary para no dejar archivos huérfanos.
+        if (user.avatarPublicId) {
+            await cloudinary.uploader.destroy(user.avatarPublicId).catch(() => {})
+        }
+
+        await user.update({ avatarUrl: result.secure_url, avatarPublicId: result.public_id })
+        const { password: _omit, ...safeUser } = user.toJSON() as any
+        res.json(safeUser)
     } catch (error: any) {
         res.status(500).json({ message: error.message })
     }
@@ -107,6 +181,11 @@ export async function login(req: Request, res: Response) {
 
         if (!user.isEmailVerified) {
             res.status(403).json({ message: 'Debes verificar tu correo antes de iniciar sesión' })
+            return
+        }
+
+        if (!user.isAllowed) {
+            res.status(403).json({ message: 'Tu cuenta está pendiente de aprobación por un administrador' })
             return
         }
 
@@ -181,6 +260,23 @@ export async function demoteUser(req: Request, res: Response) {
     }
 }
 
+// PUT /users/:userID/allow — aprueba una cuenta pendiente (isAllowed = true).
+// Protegido con authenticateToken + authorizeRoles('admin').
+export async function allowUser(req: Request, res: Response) {
+    try {
+        const user = await User.findByPk(req.params.userID as string)
+        if (!user) {
+            res.status(404).json({ message: 'Usuario no encontrado' })
+            return
+        }
+        await user.update({ isAllowed: true })
+        const { password: _omit, ...safeUser } = user.toJSON() as any
+        res.json(safeUser)
+    } catch (error: any) {
+        res.status(400).json({ message: error.message })
+    }
+}
+
 // PUT /users/me/recovery-email — el propio usuario autenticado fija/edita su correo de recuperación.
 export async function updateRecoveryEmail(req: Request, res: Response) {
     try {
@@ -193,6 +289,11 @@ export async function updateRecoveryEmail(req: Request, res: Response) {
         const user = await User.findByPk(req.user!.userID)
         if (!user) {
             res.status(404).json({ message: 'Usuario no encontrado' })
+            return
+        }
+
+        if (recoveryEmail === user.email) {
+            res.status(400).json({ message: 'El correo de recuperación debe ser distinto al correo principal' })
             return
         }
 

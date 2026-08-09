@@ -51,7 +51,8 @@ export async function register(req: Request, res: Response) {
             await db.query('SELECT pg_advisory_xact_lock(42)', { transaction: t })
 
             const existingUsers = await User.count({ transaction: t })
-            const userType = existingUsers === 0 ? 'admin' : 'seller'
+            const isFirstUser = existingUsers === 0
+            const userType = isFirstUser ? 'admin' : 'seller'
             const employeeCode = await generateUniqueEmployeeCode(t)
 
             const created = await User.create(
@@ -63,6 +64,10 @@ export async function register(req: Request, res: Response) {
                     employeeCode,
                     phone: phone || null,
                     recoveryEmail: recoveryEmail || null,
+                    // El primer usuario (admin) no necesita aprobación de nadie —
+                    // no habría quién lo apruebe. Todos los demás quedan pendientes
+                    // (isAllowed=false por default) hasta que un admin los acepte.
+                    isAllowed: isFirstUser,
                 },
                 { transaction: t },
             )

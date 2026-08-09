@@ -1,6 +1,6 @@
 // src/controllers/inventoryAdjustment.controller.ts
 import type { Request, Response } from 'express'
-import { InventoryAdjustment } from '../models/index.js'
+import { InventoryAdjustment, Product, Category, Warehouse } from '../models/index.js'
 
 export async function createInventoryAdjustment(req: Request, res: Response) {
     try {
@@ -13,7 +13,17 @@ export async function createInventoryAdjustment(req: Request, res: Response) {
 
 export async function getInventoryAdjustments(req: Request, res: Response) {
     try {
-        const items = await InventoryAdjustment.findAll()
+        // Sin este include, product/sourceWarehouse/destinationWarehouse siempre
+        // llegaban undefined al frontend — por eso "Historial de ajustes" y
+        // "Historial de transferencias" se veían con celdas vacías.
+        const items = await InventoryAdjustment.findAll({
+            include: [
+                { model: Product, include: [Category] },
+                { model: Warehouse, as: 'sourceWarehouse' },
+                { model: Warehouse, as: 'destinationWarehouse' },
+            ],
+            order: [['adjustmentDate', 'DESC']],
+        })
         res.json(items)
     } catch (error: any) {
         res.status(500).json({ message: error.message })

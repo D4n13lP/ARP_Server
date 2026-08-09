@@ -7,13 +7,17 @@ import {
     updateInventory,
     deleteInventory,
 } from '../controllers/inventory.controller.js'
+import { authenticateToken, checkPermission } from '../middleware/auth.js'
 
 const router = Router()
 
 router.post('/', createInventory)
 router.get('/', getInventorys)
 router.get('/:inventoryID', getInventoryById)
-router.put('/:inventoryID', updateInventory)
+// Editar cantidades: admin, o vendedor con canEdit activado para el módulo
+// 'inventory' (ver "Vistas permitidas" / columna "PERMISO EDITAR" en
+// OtherAccountSettings_Page).
+router.put('/:inventoryID', authenticateToken, checkPermission('inventory', 'edit'), updateInventory)
 router.delete('/:inventoryID', deleteInventory)
 
 export default router

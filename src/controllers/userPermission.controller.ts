@@ -6,6 +6,22 @@
 import type { Request, Response } from 'express'
 import { Module, UserPermission } from '../models/index.js'
 
+// GET /user-permissions/me — los permisos del propio usuario autenticado. A
+// diferencia de GET /user-permissions (admin-only), esto lo puede llamar
+// cualquiera para saber si le toca ver, p. ej., la edición de cantidades en
+// inventario.
+export async function getMyPermissions(req: Request, res: Response) {
+    try {
+        const items = await UserPermission.findAll({
+            where: { userID: req.user!.userID },
+            include: [Module],
+        })
+        res.json(items)
+    } catch (error: any) {
+        res.status(500).json({ message: error.message })
+    }
+}
+
 // GET /user-permissions?userID=... — todas las filas, opcionalmente filtradas por usuario.
 export async function getUserPermissions(req: Request, res: Response) {
     try {

@@ -32,6 +32,12 @@ export class User extends Model {
   @Column({ type: DataType.BOOLEAN, allowNull: false, defaultValue: false })
   declare isEmailVerified: boolean;
 
+  // Aprobación de cuenta por un admin — sin esto en true, login() rechaza el
+  // inicio de sesión aunque el correo ya esté verificado. El primer usuario
+  // del sistema se crea con esto en true (nadie más podría aprobarlo).
+  @Column({ type: DataType.BOOLEAN, allowNull: false, defaultValue: false })
+  declare isAllowed: boolean;
+
   @Column({ type: DataType.STRING(150), allowNull: true, unique: true })
   declare recoveryEmail: string | null;
 
@@ -43,6 +49,13 @@ export class User extends Model {
 
   @Column({ type: DataType.STRING(20), allowNull: true })
   declare phone: string | null;
+
+  @Column({ type: DataType.STRING(255), allowNull: true })
+  declare avatarUrl: string | null;
+
+  // public_id de Cloudinary, para poder borrar la imagen anterior cuando se sube una nueva.
+  @Column({ type: DataType.STRING(255), allowNull: true })
+  declare avatarPublicId: string | null;
 
   @Column({ type: DataType.DATE })
   declare createdAt: Date;
