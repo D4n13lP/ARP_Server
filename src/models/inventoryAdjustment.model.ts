@@ -39,14 +39,17 @@ export class InventoryAdjustment extends Model {
   @Column({ type: DataType.UUID, allowNull: true })
   declare sourceWarehousewhID: string;
 
-  @BelongsTo(() => Warehouse)
+  // Dos FKs distintas apuntan al mismo modelo (Warehouse) — sin foreignKey
+  // explícito aquí, sequelize-typescript no las distingue bien al resolver el
+  // include y las dos terminan devolviendo el mismo almacén (el de origen).
+  @BelongsTo(() => Warehouse, { foreignKey: 'sourceWarehousewhID', as: 'sourceWarehouse' })
   declare sourceWarehouse?: Warehouse;
 
   @ForeignKey(() => Warehouse)
   @Column({ type: DataType.UUID, allowNull: true })
   declare destinationWarehousewhID: string;
 
-  @BelongsTo(() => Warehouse)
+  @BelongsTo(() => Warehouse, { foreignKey: 'destinationWarehousewhID', as: 'destinationWarehouse' })
   declare destinationWarehouse?: Warehouse;
 
 }

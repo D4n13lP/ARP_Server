@@ -47,6 +47,7 @@ export async function updateInventory(req: Request, res: Response) {
         }
 
         const previousQuantity = item.quantity
+        const previousWhID = item.whID
         await item.update(req.body)
 
         // Si la cantidad cambió, deja rastro en el historial de ajustes — así la
@@ -61,6 +62,19 @@ export async function updateInventory(req: Request, res: Response) {
                 quantityTransferred: item.quantity - previousQuantity,
                 adjustmentDate: new Date(),
                 description: typeof req.body.description === 'string' ? req.body.description : 'Ajuste manual de cantidad',
+            })
+        }
+
+        // Si cambió de almacén, lo mismo pero en "Historial de transferencias".
+        if (typeof req.body.whID === 'string' && req.body.whID !== previousWhID) {
+            await InventoryAdjustment.create({
+                type: 'transfer',
+                prodCode: item.prodCode,
+                sourceWarehousewhID: previousWhID,
+                destinationWarehousewhID: item.whID,
+                quantityTransferred: item.quantity,
+                adjustmentDate: new Date(),
+                description: 'Cambio de almacén',
             })
         }
 

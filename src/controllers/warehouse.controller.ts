@@ -1,6 +1,6 @@
 // src/controllers/warehouse.controller.ts
 import type { Request, Response } from 'express'
-import { Warehouse } from '../models/index.js'
+import { Warehouse, Inventory } from '../models/index.js'
 
 export async function createWarehouse(req: Request, res: Response) {
     try {
@@ -54,6 +54,16 @@ export async function deleteWarehouse(req: Request, res: Response) {
             res.status(404).json({ message: 'Warehouse no encontrado' })
             return
         }
+
+        // No se permite eliminar un almacén que todavía tiene productos
+        // asignados (fila en "inventory") — en el frontend el botón
+        // "Eliminar" ya se oculta en ese caso, pero se valida aquí también.
+        const productCount = await Inventory.count({ where: { whID: item.whID } })
+        if (productCount > 0) {
+            res.status(400).json({ message: 'No se puede eliminar: este almacén todavía tiene productos relacionados.' })
+            return
+        }
+
         await item.destroy()
         res.status(204).send()
     } catch (error: any) {
