@@ -84,6 +84,88 @@ export async function updateInventory(req: Request, res: Response) {
     }
 }
 
+// POST /inventories/transfer — mueve stock de un producto hacia OTRO almacén,
+// a diferencia de updateInventory (que reasigna toda la fila). Dos modos:
+//   'transfer'  -> resta `quantity` del almacén de origen (no puede exceder lo
+//                  disponible ahí) y lo suma en el destino. Queda en
+//                  "Historial de transferencias".
+//   'ingresar'  -> suma `quantity` directo en el destino, sin tocar ningún
+//                  origen (stock nuevo que entra, ej. recién comprado). Sin
+//                  límite superior. Queda en "Historial de ajustes".
+// sourceWhID puede venir vacío/null cuando el producto todavía no tiene
+// ninguna fila de inventario (fila "virtual" en el frontend) — en ese caso
+// solo 'ingresar' tiene sentido, ya que no hay nada que transferir.
+export async function transferInventory(req: Request, res: Response) {
+    try {
+        const { prodCode, sourceWhID, destinationWhID, quantity, mode } = req.body
+
+        if (!prodCode || !destinationWhID) {
+            res.status(400).json({ message: 'prodCode y destinationWhID son obligatorios' })
+            return
+        }
+        if (mode !== 'transfer' && mode !== 'ingresar') {
+            res.status(400).json({ message: "mode debe ser 'transfer' o 'ingresar'" })
+            return
+        }
+        if (!Number.isInteger(quantity) || quantity < 1) {
+            res.status(400).json({ message: 'quantity debe ser un entero de 1 o más' })
+            return
+        }
+        if (sourceWhID && sourceWhID === destinationWhID) {
+            res.status(400).json({ message: 'El almacén de destino debe ser distinto al de origen' })
+            return
+        }
+
+        let sourceItem: Inventory | null = null
+        if (mode === 'transfer') {
+            if (!sourceWhID) {
+                res.status(400).json({ message: 'No hay almacén de origen del cual transferir' })
+                return
+            }
+            sourceItem = await Inventory.findOne({ where: { prodCode, whID: sourceWhID } })
+            if (!sourceItem || quantity > sourceItem.quantity) {
+                res.status(400).json({ message: 'La cantidad excede el stock disponible en el almacén de origen' })
+                return
+            }
+            await sourceItem.update({ quantity: sourceItem.quantity - quantity })
+        }
+
+        let destItem = await Inventory.findOne({ where: { prodCode, whID: destinationWhID } })
+        const destBefore = destItem ? destItem.quantity : 0
+        if (destItem) {
+            await destItem.update({ quantity: destItem.quantity + quantity })
+        } else {
+            destItem = await Inventory.create({ prodCode, whID: destinationWhID, quantity })
+        }
+
+        if (mode === 'transfer') {
+            await InventoryAdjustment.create({
+                type: 'transfer',
+                prodCode,
+                sourceWarehousewhID: sourceWhID,
+                destinationWarehousewhID: destinationWhID,
+                quantityTransferred: quantity,
+                adjustmentDate: new Date(),
+                description: 'Transferencia entre almacenes',
+            })
+        } else {
+            await InventoryAdjustment.create({
+                type: 'adjust',
+                prodCode,
+                availableBefore: destBefore,
+                outstandingDeliveryBefore: 0,
+                quantityTransferred: quantity,
+                adjustmentDate: new Date(),
+                description: 'Ingreso de stock nuevo',
+            })
+        }
+
+        res.json({ source: sourceItem, destination: destItem })
+    } catch (error: any) {
+        res.status(400).json({ message: error.message })
+    }
+}
+
 export async function deleteInventory(req: Request, res: Response) {
     try {
         const item = await Inventory.findByPk(req.params.inventoryID as string)

@@ -2,6 +2,7 @@
 import { BelongsTo, Column, DataType, Default, ForeignKey, Model, PrimaryKey, Table } from 'sequelize-typescript';
 import { DestAccount } from './destAccount.model.js';
 import { Transaction } from './transaction.model.js';
+import { User } from './user.model.js';
 
 @Table({ tableName: 'paymentHistory', timestamps: false })
 export class PaymentHistory extends Model {
@@ -32,5 +33,14 @@ export class PaymentHistory extends Model {
 
   @BelongsTo(() => DestAccount)
   declare destAccount?: DestAccount;
+
+  // Quién tenía la sesión abierta al registrar este pago/abono ("Cobró" en
+  // OrderDetail_Page) — nulo en pagos históricos de antes de esta columna.
+  @ForeignKey(() => User)
+  @Column({ type: DataType.UUID, allowNull: true })
+  declare collectedByUserID: string;
+
+  @BelongsTo(() => User, { foreignKey: 'collectedByUserID', as: 'collectedBy' })
+  declare collectedBy?: User;
 
 }
