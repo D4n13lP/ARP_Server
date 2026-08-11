@@ -1,6 +1,6 @@
 // src/controllers/paymentHistory.controller.ts
 import type { Request, Response } from 'express'
-import { PaymentHistory } from '../models/index.js'
+import { PaymentHistory, User } from '../models/index.js'
 
 export async function createPaymentHistory(req: Request, res: Response) {
     try {
@@ -13,7 +13,12 @@ export async function createPaymentHistory(req: Request, res: Response) {
 
 export async function getPaymentHistorys(req: Request, res: Response) {
     try {
-        const items = await PaymentHistory.findAll()
+        // Sin este include, "collectedBy" siempre llega vacío y cualquier
+        // cálculo que dependa de "quién cobró este pago" (p. ej. el saldo de
+        // caja por usuario en Retiros_Page) queda en cero.
+        const items = await PaymentHistory.findAll({
+            include: [{ model: User, as: 'collectedBy', attributes: ['userID', 'userName'] }],
+        })
         res.json(items)
     } catch (error: any) {
         res.status(500).json({ message: error.message })
