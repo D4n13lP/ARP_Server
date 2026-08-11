@@ -245,10 +245,19 @@ export async function getTransactions(req: Request, res: Response) {
         const where: Record<string, unknown> = {}
         if (req.query.transType) where.transType = req.query.transType
         if (req.query.status) where.status = req.query.status
+        if (req.query.clientCode) where.clientCode = req.query.clientCode
+
+        // Filtrar por cliente es para ClientHistory_Page, que además necesita
+        // ver los productos de cada compra — se agrega TransDetail+Product
+        // solo en ese caso para no engordar el listado normal (UpdateOrder_Page
+        // / OrdersReports_Page / SalesReport_Page), que no los usa.
+        const include = req.query.clientCode
+            ? [...LIST_TRANSACTION_INCLUDE, { model: TransDetail, include: [Product] }]
+            : LIST_TRANSACTION_INCLUDE
 
         const transactions = await Transaction.findAll({
             where,
-            include: LIST_TRANSACTION_INCLUDE,
+            include,
             order: [['transactionDate', 'DESC']],
         })
         res.json(transactions)

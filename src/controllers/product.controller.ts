@@ -1,7 +1,7 @@
 // src/controllers/product.controller.ts
 import type { Request, Response } from 'express'
 import { Op } from 'sequelize'
-import { Product, Category, ProductUnit, Picture, Promo } from '../models/index.js'
+import { Product, Category, ProductUnit, Picture, Promo, Supplier } from '../models/index.js'
 import cloudinary from '../config/cloudinary.js'
 
 // Borra de Cloudinary las imágenes de un producto. El borrado en la BD ya
@@ -78,7 +78,7 @@ export async function getProducts(req: Request, res: Response) {
     try {
         await purgeStaleDrafts()
         const products = await Product.findAll({
-            include: [Category, ProductUnit, Picture, Promo],
+            include: [Category, ProductUnit, Picture, Promo, Supplier],
             order: [['productName', 'ASC']],
         })
         res.json(products)
@@ -90,7 +90,7 @@ export async function getProducts(req: Request, res: Response) {
 export async function getProductById(req: Request, res: Response) {
     try {
         const product = await Product.findByPk(req.params.prodCode as string, {
-            include: [Category, ProductUnit, Picture, Promo],
+            include: [Category, ProductUnit, Picture, Promo, Supplier],
         })
         if (!product) {
             res.status(404).json({ message: 'Producto no encontrado' })
@@ -110,7 +110,7 @@ export async function updateProduct(req: Request, res: Response) {
             return
         }
         await product.update(req.body)
-        await product.reload({ include: [Category, ProductUnit, Picture, Promo] })
+        await product.reload({ include: [Category, ProductUnit, Picture, Promo, Supplier] })
         res.json(product)
     } catch (error: any) {
         res.status(400).json({ message: error.message })
