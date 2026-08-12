@@ -20,6 +20,7 @@ import rolePermissionRoutes from './routes/rolePermission.routes.js'
 import salesExpectationRoutes from './routes/salesExpectation.routes.js'
 import suppProdRoutes from './routes/suppProd.routes.js'
 import supplierRoutes from './routes/supplier.routes.js'
+import ticketConfigRoutes from './routes/ticketConfig.routes.js'
 import timeUnitRoutes from './routes/timeUnit.routes.js'
 import totalCashRoutes from './routes/totalCash.routes.js'
 import transCourierRoutes from './routes/transCourier.routes.js'
@@ -55,6 +56,7 @@ router.use('/api/role-permissions', rolePermissionRoutes)
 router.use('/api/sales-expectations', salesExpectationRoutes)
 router.use('/api/supp-prods', suppProdRoutes)
 router.use('/api/suppliers', supplierRoutes)
+router.use('/api/ticket-config', ticketConfigRoutes)
 router.use('/api/time-units', timeUnitRoutes)
 router.use('/api/total-cash', totalCashRoutes)
 router.use('/api/trans-couriers', transCourierRoutes)

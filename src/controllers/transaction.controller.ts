@@ -1,7 +1,7 @@
 // src/controllers/transaction.controller.ts
 import type { Request, Response } from 'express'
 import db from '../config/db.js'
-import { Transaction, Client, TransDetail, Inventory, Product, Warehouse, PaymentHistory, TransDestAcc, TransCourier, TransUser, User, Courier } from '../models/index.js'
+import { Transaction, Client, TransDetail, Inventory, Product, Warehouse, PaymentHistory, TransDestAcc, TransCourier, TransUser, User, Courier, DestAccount } from '../models/index.js'
 
 // Include completo para mandar al frontend todo lo que necesitan
 // UpdateOrder_Page / OrderDetail_Page / OrdersReports_Page: cliente, renglones
@@ -11,7 +11,7 @@ import { Transaction, Client, TransDetail, Inventory, Product, Warehouse, Paymen
 const FULL_TRANSACTION_INCLUDE = [
     Client,
     { model: TransDetail, include: [Product] },
-    { model: PaymentHistory, include: [{ model: User, as: 'collectedBy', attributes: ['userID', 'userName'] }] },
+    { model: PaymentHistory, include: [{ model: User, as: 'collectedBy', attributes: ['userID', 'userName'] }, DestAccount] },
     { model: User, attributes: ['userID', 'userName'] },
     Courier,
 ]
@@ -250,10 +250,17 @@ export async function getTransactions(req: Request, res: Response) {
         // Filtrar por cliente es para ClientHistory_Page, que además necesita
         // ver los productos de cada compra — se agrega TransDetail+Product
         // solo en ese caso para no engordar el listado normal (UpdateOrder_Page
-        // / OrdersReports_Page / SalesReport_Page), que no los usa.
-        const include = req.query.clientCode
-            ? [...LIST_TRANSACTION_INCLUDE, { model: TransDetail, include: [Product] }]
-            : LIST_TRANSACTION_INCLUDE
+        // / OrdersReports_Page), que no los usa.
+        let include: any[] = LIST_TRANSACTION_INCLUDE
+        if (req.query.clientCode) {
+            include = [...include, { model: TransDetail, include: [Product] }]
+        }
+        // includePayments=true es para SalesReport_Page, que necesita mostrar
+        // la forma de pago (y el alias de la cuenta destino si fue digital)
+        // de cada venta en la tabla — el resto de listados no lo pide.
+        if (req.query.includePayments === 'true') {
+            include = [...include, { model: PaymentHistory, include: [DestAccount] }]
+        }
 
         const transactions = await Transaction.findAll({
             where,

@@ -17,6 +17,7 @@ export * from './rolePermission.model.js';
 export * from './salesExpectation.model.js';
 export * from './suppProd.model.js';
 export * from './supplier.model.js';
+export * from './ticketConfig.model.js';
 export * from './timeUnit.model.js';
 export * from './totalCash.model.js';
 export * from './transCourier.model.js';
