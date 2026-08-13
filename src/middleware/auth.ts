@@ -57,8 +57,14 @@ const ACTION_COLUMN: Record<PermissionAction, 'canView' | 'canCreate' | 'canEdit
 // dado, y exige que la columna correspondiente a `action` sea true. Los permisos
 // son por individuo (ver contextoMD/migracion_permisos_individuales.sql) — dos
 // usuarios del mismo userType pueden tener accesos distintos. Usar después de authenticateToken.
-export function checkPermission(moduleKey: string, action: PermissionAction) {
+//
+// moduleKey acepta un arreglo cuando el mismo recurso del backend se edita
+// desde más de una vista (p. ej. "product" se guarda tanto desde
+// AddProduct_Page como desde ProductModal) — pasa con que tenga el permiso
+// en AL MENOS una de esas vistas (OR), no hace falta tenerlo en todas.
+export function checkPermission(moduleKey: string | string[], action: PermissionAction) {
     const column = ACTION_COLUMN[action]
+    const moduleKeys = Array.isArray(moduleKey) ? moduleKey : [moduleKey]
 
     return async function (req: Request, res: Response, next: NextFunction) {
         try {
@@ -75,12 +81,20 @@ export function checkPermission(moduleKey: string, action: PermissionAction) {
                 return
             }
 
+            // OJO: el filtro de la columna (canView/canEdit/...) va DENTRO del
+            // where, no se revisa después sobre la primera fila que regrese.
+            // Con varios moduleKeys, un usuario normalmente tiene una fila por
+            // módulo — si se pidiera "cualquier fila" y luego se leyera su
+            // columna, findOne podía devolver la fila de OTRO módulo (con esa
+            // columna en false) y rechazar aunque sí tuviera el permiso en el
+            // módulo correcto. Así, existe una fila que cumple ambas cosas a
+            // la vez (columna en true Y moduleKey en la lista) o no existe.
             const permission = await UserPermission.findOne({
-                where: { userID: req.user.userID },
-                include: [{ model: Module, where: { moduleKey }, attributes: [] }],
+                where: { userID: req.user.userID, [column]: true },
+                include: [{ model: Module, where: { moduleKey: moduleKeys }, attributes: [] }],
             })
 
-            if (!permission || !permission.get(column)) {
+            if (!permission) {
                 res.status(403).json({ message: 'No tienes permiso para realizar esta acción' })
                 return
             }

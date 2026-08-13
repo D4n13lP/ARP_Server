@@ -106,7 +106,7 @@ async function processTransaction(req: Request, res: Response, transType: 'sale'
         // crear nada más. El precio SIEMPRE se toma del producto en el
         // servidor — nunca se confía en lo que mande el cliente.
         let itemsTotal = 0
-        const detailRows: Array<{ prodCode: string; quantity: number; unitPrice: number; subtotal: number; appliedDisc: number }> = []
+        const detailRows: Array<{ prodCode: string; quantity: number; unitPrice: number; subtotal: number; appliedDisc: number; whID: string }> = []
         for (const raw of items) {
             const qty = Number(raw.quantity)
             if (!Number.isInteger(qty) || qty < 1) {
@@ -142,6 +142,7 @@ async function processTransaction(req: Request, res: Response, transType: 'sale'
                 unitPrice,
                 subtotal: lineSubtotal,
                 appliedDisc: discFraction,
+                whID: invRow.whID,
             })
         }
 
@@ -249,10 +250,12 @@ export async function getTransactions(req: Request, res: Response) {
 
         // Filtrar por cliente es para ClientHistory_Page, que además necesita
         // ver los productos de cada compra — se agrega TransDetail+Product
-        // solo en ese caso para no engordar el listado normal (UpdateOrder_Page
-        // / OrdersReports_Page), que no los usa.
+        // solo en ese caso (o si se pide explícitamente con includeDetails,
+        // como en Inventory.tsx para la columna "Pendiente entrega") para no
+        // engordar el listado normal (UpdateOrder_Page / OrdersReports_Page),
+        // que no los usa.
         let include: any[] = LIST_TRANSACTION_INCLUDE
-        if (req.query.clientCode) {
+        if (req.query.clientCode || req.query.includeDetails === 'true') {
             include = [...include, { model: TransDetail, include: [Product] }]
         }
         // includePayments=true es para SalesReport_Page, que necesita mostrar

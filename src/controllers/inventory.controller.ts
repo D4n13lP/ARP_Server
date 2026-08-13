@@ -1,9 +1,28 @@
 // src/controllers/inventory.controller.ts
 import type { Request, Response } from 'express'
-import { Inventory, Product, Warehouse, Category, ProductUnit, Picture, Promo, InventoryAdjustment } from '../models/index.js'
+import { Inventory, Product, Warehouse, Category, ProductUnit, Picture, Promo, InventoryAdjustment, TransDetail } from '../models/index.js'
+
+// El almacén fijo "Pedido especial" (ver warehouse.model.ts) solo puede
+// recibir stock a través del flujo de Orden Especial (createSpecialOrderProduct
+// en product.controller.ts, que crea el Inventory directo con el modelo, sin
+// pasar por este controller) — cualquier otra vía queda bloqueada aquí.
+// Se checa por bandera Y por nombre exacto: blindaje extra por si existiera
+// una fila con ese nombre creada antes de tener la columna isSpecialOrders
+// (o duplicada a mano), que si no quedaría desprotegida.
+const SPECIAL_ORDER_WAREHOUSE_NAME = 'Pedido especial'
+async function isSpecialOrdersWarehouse(whID: unknown): Promise<boolean> {
+    if (typeof whID !== 'string' || !whID) return false
+    const wh = await Warehouse.findByPk(whID)
+    if (!wh) return false
+    return !!wh.isSpecialOrders || wh.whname === SPECIAL_ORDER_WAREHOUSE_NAME
+}
 
 export async function createInventory(req: Request, res: Response) {
     try {
+        if (await isSpecialOrdersWarehouse(req.body.whID)) {
+            res.status(400).json({ message: 'No se puede ingresar productos manualmente al almacén de Pedidos especiales.' })
+            return
+        }
         const item = await Inventory.create(req.body)
         res.status(201).json(item)
     } catch (error: any) {
@@ -48,6 +67,12 @@ export async function updateInventory(req: Request, res: Response) {
 
         const previousQuantity = item.quantity
         const previousWhID = item.whID
+
+        if (typeof req.body.whID === 'string' && req.body.whID !== previousWhID && await isSpecialOrdersWarehouse(req.body.whID)) {
+            res.status(400).json({ message: 'No se puede mover productos manualmente al almacén de Pedidos especiales.' })
+            return
+        }
+
         await item.update(req.body)
 
         // Si la cantidad cambió, deja rastro en el historial de ajustes — así la
@@ -115,6 +140,12 @@ export async function transferInventory(req: Request, res: Response) {
             res.status(400).json({ message: 'El almacén de destino debe ser distinto al de origen' })
             return
         }
+        // Ni transferir ni ingresar stock nuevo pueden apuntar al almacén de
+        // Pedidos especiales — solo el flujo de Orden Especial puede llenarlo.
+        if (await isSpecialOrdersWarehouse(destinationWhID)) {
+            res.status(400).json({ message: 'No se puede transferir ni ingresar stock manualmente al almacén de Pedidos especiales.' })
+            return
+        }
 
         let sourceItem: Inventory | null = null
         if (mode === 'transfer') {
@@ -168,12 +199,30 @@ export async function transferInventory(req: Request, res: Response) {
 
 export async function deleteInventory(req: Request, res: Response) {
     try {
-        const item = await Inventory.findByPk(req.params.inventoryID as string)
+        const item = await Inventory.findByPk(req.params.inventoryID as string, { include: [Product] })
         if (!item) {
             res.status(404).json({ message: 'Inventory no encontrado' })
             return
         }
+        const prodCode = item.prodCode
+        const isCustom = item.product?.prodType === 'custom'
         await item.destroy()
+
+        // Los productos armados al vuelo desde "Orden Especial" (prodType
+        // 'custom') son de un solo uso: si este era su único registro de
+        // inventario Y nunca llegaron a venderse/pedirse de verdad (sin
+        // renglones en transDetail, que sí romperían el historial de una
+        // transacción real), no tiene sentido dejar el producto huérfano.
+        if (isCustom) {
+            const [remainingInventory, usedInTransactions] = await Promise.all([
+                Inventory.count({ where: { prodCode } }),
+                TransDetail.count({ where: { prodCode } }),
+            ])
+            if (remainingInventory === 0 && usedInTransactions === 0) {
+                await Product.destroy({ where: { prodCode } })
+            }
+        }
+
         res.status(204).send()
     } catch (error: any) {
         res.status(500).json({ message: error.message })

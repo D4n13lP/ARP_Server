@@ -3,6 +3,7 @@ import { BelongsTo, Column, DataType, Default, ForeignKey, Model, PrimaryKey, Ta
 import { Product } from './product.model.js';
 import { TransDiscount } from './transDiscount.model.js';
 import { Transaction } from './transaction.model.js';
+import { Warehouse } from './warehouse.model.js';
 
 @Table({ tableName: 'transDetail', timestamps: false })
 export class TransDetail extends Model {
@@ -43,5 +44,17 @@ export class TransDetail extends Model {
 
   @BelongsTo(() => TransDiscount)
   declare discount?: TransDiscount;
+
+  // De qué almacén se descontó este renglón al vender/pedir (ver
+  // processTransaction en transaction.controller.ts) — nulo en renglones
+  // históricos de antes de esta columna. Lo usa Inventory.tsx para atribuir
+  // "Pendiente entrega" al almacén correcto en vez de duplicarlo en todos
+  // los almacenes donde existe el producto.
+  @ForeignKey(() => Warehouse)
+  @Column({ type: DataType.UUID, allowNull: true })
+  declare whID: string;
+
+  @BelongsTo(() => Warehouse)
+  declare warehouse?: Warehouse;
 
 }

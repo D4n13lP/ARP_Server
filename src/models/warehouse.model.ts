@@ -16,6 +16,15 @@ export class Warehouse extends Model {
   @Column({ type: DataType.STRING(255) })
   declare whaddress: string;
 
+  // Almacén fijo "Pedido especial" (createSpecialOrderProduct en
+  // product.controller.ts lo crea solo si no existe todavía): no se puede
+  // renombrar (updateWarehouse) ni recibir stock manualmente vía
+  // createInventory/updateInventory/transferInventory — la única forma de
+  // meterle inventario es el flujo de "Orden Especial" en RegisterOrder_Page.
+  @Default(false)
+  @Column({ type: DataType.BOOLEAN, allowNull: false })
+  declare isSpecialOrders: boolean;
+
   @HasMany(() => Inventory)
   declare inventories?: Inventory[];
 

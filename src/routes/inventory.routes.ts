@@ -12,7 +12,9 @@ import { authenticateToken, checkPermission } from '../middleware/auth.js'
 
 const router = Router()
 
-router.post('/', createInventory)
+// Se crea (asignar un producto a un almacén por primera vez) desde
+// AddProduct_Page o RegisterProducts_Page.
+router.post('/', authenticateToken, checkPermission(['add-product', 'register-products'], 'edit'), createInventory)
 // Transferir stock entre almacenes o ingresar stock nuevo (ver transferInventory)
 // — mismo permiso que editar cantidades.
 router.post('/transfer', authenticateToken, checkPermission('inventory', 'edit'), transferInventory)
@@ -22,6 +24,7 @@ router.get('/:inventoryID', getInventoryById)
 // 'inventory' (ver "Vistas permitidas" / columna "PERMISO EDITAR" en
 // OtherAccountSettings_Page).
 router.put('/:inventoryID', authenticateToken, checkPermission('inventory', 'edit'), updateInventory)
-router.delete('/:inventoryID', deleteInventory)
+// Eliminar registro de inventario (solo con cantidad 0, ver Inventory.tsx) — mismo permiso.
+router.delete('/:inventoryID', authenticateToken, checkPermission('inventory', 'edit'), deleteInventory)
 
 export default router

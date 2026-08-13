@@ -27,4 +27,23 @@ export class SalesExpectation extends Model {
   @BelongsTo(() => TimeUnit)
   declare timeUnit?: TimeUnit;
 
+  // Cuántas unidades de "timeUnit" dura el plazo (p. ej. periodLength=3 +
+  // timeUnit="días" = "cada 3 días"). Antes existía un input para esto en
+  // SalesPriceForm (cantTiempo) pero nunca se guardaba, se quedaba solo en
+  // el estado local del formulario — sin esto no hay forma de saber cuánto
+  // dura el plazo, solo el nombre genérico de la unidad.
+  @Column({ type: DataType.INTEGER, allowNull: false, defaultValue: 1 })
+  declare periodLength: number;
+
+  // Ancla fija del plazo: se calculan UNA vez al crear (o al editar
+  // cantidad/unidad/duración) en vez de recalcularse cada vez que se
+  // consulta — así "¿se cumplió en el tiempo establecido?" tiene una
+  // respuesta estable en vez de una ventana móvil que se sigue corriendo
+  // mientras el producto siga vendiéndose (ver salesExpectation.controller.ts).
+  @Column({ type: DataType.DATEONLY, allowNull: false })
+  declare startDate: string;
+
+  @Column({ type: DataType.DATEONLY, allowNull: false })
+  declare endDate: string;
+
 }

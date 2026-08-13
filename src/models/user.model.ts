@@ -14,7 +14,10 @@ export class User extends Model {
   @Column({ type: DataType.UUID })
   declare userID: string;
 
-  @Column({ type: DataType.STRING(100), allowNull: false })
+  // Único a propósito: login() (user.controller.ts) busca la cuenta por
+  // email O userName, y con nombres repetidos podría entrar a la cuenta
+  // equivocada.
+  @Column({ type: DataType.STRING(100), allowNull: false, unique: true })
   declare userName: string;
 
   @Column({ type: DataType.STRING(150), allowNull: false, unique: true })

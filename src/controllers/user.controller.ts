@@ -2,6 +2,7 @@
 import type { Request, Response } from 'express'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
+import { Op } from 'sequelize'
 import { User, UserPermission } from '../models/index.js'
 import { generateUniqueEmployeeCode } from '../utils/employeeCode.js'
 import { seedUserPermissions } from '../utils/seedUserPermissions.js'
@@ -25,6 +26,11 @@ export async function createUser(req: Request, res: Response) {
         res.status(201).json(safeUser)
     } catch (error: any) {
         if (error.name === 'SequelizeUniqueConstraintError') {
+            const field = error.errors?.[0]?.path
+            if (field === 'userName') {
+                res.status(409).json({ message: 'Ese nombre de usuario ya está en uso' })
+                return
+            }
             res.status(409).json({ message: 'Ese correo ya está registrado' })
             return
         }
@@ -163,11 +169,21 @@ export async function deleteUser(req: Request, res: Response) {
 }
 
 // --- Login ---
+// El campo del body se sigue llamando "email" por compatibilidad, pero
+// LoginDisplay_Page acepta "usuario/correo" — aquí se busca por cualquiera
+// de los dos (antes solo comparaba contra email, así que escribir el nombre
+// de usuario nunca encontraba la cuenta).
 export async function login(req: Request, res: Response) {
     try {
         const { email, password } = req.body
+        const identifier = typeof email === 'string' ? email.trim() : email
 
-        const user = await User.findOne({ where: { email, isActive: true } })
+        const user = await User.findOne({
+            where: {
+                isActive: true,
+                [Op.or]: [{ email: identifier }, { userName: identifier }],
+            },
+        })
         if (!user) {
             res.status(401).json({ message: 'Credenciales inválidas' })
             return

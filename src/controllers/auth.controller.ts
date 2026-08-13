@@ -108,6 +108,10 @@ export async function register(req: Request, res: Response) {
                 res.status(409).json({ message: 'Ese correo de recuperación ya está en uso por otro usuario' })
                 return
             }
+            if (field === 'userName') {
+                res.status(409).json({ message: 'Ese nombre de usuario ya está en uso' })
+                return
+            }
             res.status(409).json({ message: 'Ese correo ya está registrado' })
             return
         }
