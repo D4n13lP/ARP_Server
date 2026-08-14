@@ -139,7 +139,7 @@ export async function getDashboard(req: Request, res: Response) {
             // Cuántas unidades le faltaron para llegar a la meta, no el stock —
             // esta tabla ahora mide incumplimiento de la expectativa, no inventario.
             cantidad: Math.max(0, item.exp.quantity - item.soldQuantity),
-            tiempo: `venció hace ${daysBetweenDateOnly(item.exp.endDate, todayStr)} días`,
+            tiempo: `venció hace ${daysBetweenDateOnly(item.exp.endDate, todayStr).toLocaleString('es-MX')} días`,
         }))
 
         // Productos con stock bajo: cantidad disponible en inventario
@@ -154,7 +154,7 @@ export async function getDashboard(req: Request, res: Response) {
             id: idx + 1,
             producto: p.productName,
             cantidad: stockByProduct.get(p.prodCode) || 0,
-            tiempo: `mínimo: ${p.lowStock}`,
+            tiempo: `mínimo: ${p.lowStock.toLocaleString('es-MX')}`,
         }))
 
         // Productos recién llegados: los últimos productos dados de alta
@@ -193,24 +193,31 @@ export async function getDashboard(req: Request, res: Response) {
             }))
 
         // Pedidos por vencer: los que todavía no se entregan (status
-        // "pending"), ordenados por fecha de entrega más próxima primero —
-        // los ya vencidos (fecha en el pasado) quedan al inicio por ser los
-        // más urgentes. deliveryDate es DATEONLY ("YYYY-MM-DD"): se compara
-        // como texto/aritmética de calendario, nunca convirtiéndola a un
-        // instante real (new Date(...).getTime()), que la interpreta como
-        // medianoche UTC y se corre de día contra la hora de México.
+        // "pending") y están por vencer o ya vencidos. La fecha límite de
+        // cada pedido es deliveryDate (entrega inmediata) o, si no tiene,
+        // dispatchDateF (fin de la ventana de despacho) — solo entran los que
+        // les queda 1 día o menos para esa fecha, o ya la pasaron ("vence
+        // hoy" se cuenta como urgente también, no solo mañana/vencido). Los
+        // ya vencidos quedan al inicio por ser los más urgentes. Todas son
+        // columnas DATEONLY ("YYYY-MM-DD"): se comparan como texto/aritmética
+        // de calendario, nunca convirtiéndolas a un instante real
+        // (new Date(...).getTime()), que las interpreta como medianoche UTC y
+        // se corre de día contra la hora de México.
         const pedidosOrdenados = pendingOrders
-            .filter((o) => !!o.deliveryDate)
-            .sort((a, b) => (a.deliveryDate < b.deliveryDate ? -1 : a.deliveryDate > b.deliveryDate ? 1 : 0))
+            .map((order) => ({ order, fechaLimite: order.deliveryDate || order.dispatchDateF }))
+            .filter((x): x is { order: (typeof pendingOrders)[number]; fechaLimite: string } => (
+                !!x.fechaLimite && daysBetweenDateOnly(todayStr, x.fechaLimite) <= 1
+            ))
+            .sort((a, b) => (a.fechaLimite < b.fechaLimite ? -1 : a.fechaLimite > b.fechaLimite ? 1 : 0))
 
-        const pedidosPorVencer: MetricTableItem[] = pedidosOrdenados.slice(0, 5).map((order, idx) => {
+        const pedidosPorVencer: MetricTableItem[] = pedidosOrdenados.slice(0, 5).map(({ order, fechaLimite }, idx) => {
             const totalQty = (order.details || []).reduce((sum, d) => sum + d.quantity, 0)
-            const diffDays = daysBetweenDateOnly(todayStr, order.deliveryDate)
+            const diffDays = daysBetweenDateOnly(todayStr, fechaLimite)
             const tiempo = diffDays < 0
-                ? `vencido hace ${Math.abs(diffDays)} días`
+                ? `vencido hace ${Math.abs(diffDays).toLocaleString('es-MX')} días`
                 : diffDays === 0
                     ? 'vence hoy'
-                    : `vence en ${diffDays} días`
+                    : `vence en ${diffDays.toLocaleString('es-MX')} días`
             return {
                 id: idx + 1,
                 producto: `${order.folio || order.transactionID.slice(0, 8)} — ${order.client?.clientName || 'Sin cliente'}`,
