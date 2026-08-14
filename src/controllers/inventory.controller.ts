@@ -85,6 +85,9 @@ export async function updateInventory(req: Request, res: Response) {
                 availableBefore: previousQuantity,
                 outstandingDeliveryBefore: 0,
                 quantityTransferred: item.quantity - previousQuantity,
+                // Instante real en UTC a propósito (igual que paymentDate en
+                // transaction.controller.ts) — el frontend (formatDateTimeMX)
+                // ya lo convierte a hora de México solo al mostrarlo.
                 adjustmentDate: new Date(),
                 description: typeof req.body.description === 'string' ? req.body.description : 'Ajuste manual de cantidad',
             })
@@ -98,6 +101,9 @@ export async function updateInventory(req: Request, res: Response) {
                 sourceWarehousewhID: previousWhID,
                 destinationWarehousewhID: item.whID,
                 quantityTransferred: item.quantity,
+                // Instante real en UTC a propósito (igual que paymentDate en
+                // transaction.controller.ts) — el frontend (formatDateTimeMX)
+                // ya lo convierte a hora de México solo al mostrarlo.
                 adjustmentDate: new Date(),
                 description: 'Cambio de almacén',
             })
@@ -176,6 +182,9 @@ export async function transferInventory(req: Request, res: Response) {
                 sourceWarehousewhID: sourceWhID,
                 destinationWarehousewhID: destinationWhID,
                 quantityTransferred: quantity,
+                // Instante real en UTC a propósito (igual que paymentDate en
+                // transaction.controller.ts) — el frontend (formatDateTimeMX)
+                // ya lo convierte a hora de México solo al mostrarlo.
                 adjustmentDate: new Date(),
                 description: 'Transferencia entre almacenes',
             })
@@ -186,6 +195,9 @@ export async function transferInventory(req: Request, res: Response) {
                 availableBefore: destBefore,
                 outstandingDeliveryBefore: 0,
                 quantityTransferred: quantity,
+                // Instante real en UTC a propósito (igual que paymentDate en
+                // transaction.controller.ts) — el frontend (formatDateTimeMX)
+                // ya lo convierte a hora de México solo al mostrarlo.
                 adjustmentDate: new Date(),
                 description: 'Ingreso de stock nuevo',
             })

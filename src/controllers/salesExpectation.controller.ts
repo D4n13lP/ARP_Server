@@ -2,25 +2,20 @@
 import type { Request, Response } from 'express'
 import { SalesExpectation, TimeUnit } from '../models/index.js'
 import { getSoldQuantityInRange } from '../utils/salesExpectationProgress.js'
+import { toBusinessDateOnly, addDaysToDateOnly, addMonthsToDateOnly } from '../utils/businessTime.js'
 
 // Suma periodLength unidades de tiempo (según el nombre del TimeUnit) a
-// startDate. "días"/"semanas"/"meses" son las 3 únicas opciones que ofrece el
-// frontend (AddProduct_Page y ProductModal) — cualquier otro nombre cae al
-// caso de "días" por seguridad.
-function addPeriod(startDate: Date, periodLength: number, timeUnitName: string | undefined): Date {
-    const end = new Date(startDate)
-    if (timeUnitName === 'semanas') {
-        end.setUTCDate(end.getUTCDate() + periodLength * 7)
-    } else if (timeUnitName === 'meses') {
-        end.setUTCMonth(end.getUTCMonth() + periodLength)
-    } else {
-        end.setUTCDate(end.getUTCDate() + periodLength)
-    }
-    return end
-}
-
-function toDateOnly(date: Date): string {
-    return date.toISOString().slice(0, 10)
+// startDate ("YYYY-MM-DD"). "días"/"semanas"/"meses" son las 3 únicas
+// opciones que ofrece el frontend (AddProduct_Page y ProductModal) —
+// cualquier otro nombre cae al caso de "días" por seguridad. Aritmética de
+// calendario pura (ver businessTime.ts) — antes se hacía sobre un objeto
+// Date con setUTCDate/setUTCMonth, lo que podía adelantar startDate un día
+// completo respecto a la hora real de México al crear/editar la expectativa
+// entre las 18:00 y las 23:59 hora local.
+function addPeriodToDateOnly(dateStr: string, periodLength: number, timeUnitName: string | undefined): string {
+    if (timeUnitName === 'semanas') return addDaysToDateOnly(dateStr, periodLength * 7)
+    if (timeUnitName === 'meses') return addMonthsToDateOnly(dateStr, periodLength)
+    return addDaysToDateOnly(dateStr, periodLength)
 }
 
 // Agrega al JSON de la fila cuánto se ha vendido realmente del producto
@@ -33,7 +28,7 @@ async function withProgress(item: SalesExpectation) {
     const json = item.toJSON() as Record<string, unknown>
     json.soldQuantity = soldQuantity
     json.fulfilled = soldQuantity >= item.quantity
-    json.periodEnded = toDateOnly(new Date()) > item.endDate
+    json.periodEnded = toBusinessDateOnly() > item.endDate
     return json
 }
 
@@ -48,16 +43,16 @@ export async function createSalesExpectation(req: Request, res: Response) {
             return
         }
 
-        const startDate = new Date()
-        const endDate = addPeriod(startDate, length, timeUnit.timeunitName)
+        const startDate = toBusinessDateOnly()
+        const endDate = addPeriodToDateOnly(startDate, length, timeUnit.timeunitName)
 
         const item = await SalesExpectation.create({
             prodCode,
             timeunitID,
             quantity,
             periodLength: length,
-            startDate: toDateOnly(startDate),
-            endDate: toDateOnly(endDate),
+            startDate,
+            endDate,
         })
         await item.reload({ include: [TimeUnit] })
         res.status(201).json(await withProgress(item))
@@ -115,7 +110,7 @@ export async function updateSalesExpectation(req: Request, res: Response) {
             const timeunitIDToUse = (updates.timeunitID as string) || item.timeunitID
             const timeUnit = await TimeUnit.findByPk(timeunitIDToUse)
             const lengthToUse = (updates.periodLength as number) || item.periodLength
-            updates.endDate = toDateOnly(addPeriod(new Date(item.startDate), lengthToUse, timeUnit?.timeunitName))
+            updates.endDate = addPeriodToDateOnly(item.startDate, lengthToUse, timeUnit?.timeunitName)
         }
 
         await item.update(updates)

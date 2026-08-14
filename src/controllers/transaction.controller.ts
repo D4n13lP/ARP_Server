@@ -2,6 +2,7 @@
 import type { Request, Response } from 'express'
 import db from '../config/db.js'
 import { Transaction, Client, TransDetail, Inventory, Product, Warehouse, PaymentHistory, TransDestAcc, TransCourier, TransUser, User, Courier, DestAccount } from '../models/index.js'
+import { toBusinessDateOnly } from '../utils/businessTime.js'
 
 // Include completo para mandar al frontend todo lo que necesitan
 // UpdateOrder_Page / OrderDetail_Page / OrdersReports_Page: cliente, renglones
@@ -148,7 +149,11 @@ async function processTransaction(req: Request, res: Response, transType: 'sale'
 
         const shipping = Number(shippingCost) || 0
         const finalAmount = itemsTotal + shipping
-        const today = new Date().toISOString().slice(0, 10)
+        // Hora del negocio (México), no UTC — con .toISOString() esto se
+        // adelantaba hasta 6 horas (un día calendario completo) entre las
+        // 18:00 y las 23:59 hora local, dejando transactionDate/deliveryDate
+        // con la fecha de "mañana" (ver src/utils/businessTime.ts).
+        const today = toBusinessDateOnly()
 
         // Venta: se paga completa (outstanding 0). Pedido: solo el anticipo
         // (puede ser 0), el resto queda pendiente de cobrar después.
@@ -158,6 +163,12 @@ async function processTransaction(req: Request, res: Response, transType: 'sale'
         const transaction = await Transaction.create({
             transType,
             status: transType === 'sale' ? 'completed' : 'pending',
+            // Antes no se mandaba y quedaba en manos del DEFAULT CURRENT_DATE
+            // de la columna, que evalúa en la zona de la sesión de Postgres
+            // (UTC en Render) — mandarlo explícito aquí también corrige de
+            // paso folioYear/folioMonth, que el trigger fn_assign_folio()
+            // calcula con COALESCE(NEW."transactionDate", CURRENT_DATE).
+            transactionDate: today,
             clientCode: resolvedClientCode,
             finalAmount,
             outstandingAmount,
@@ -182,6 +193,14 @@ async function processTransaction(req: Request, res: Response, transType: 'sale'
             await PaymentHistory.create({
                 paymentAmount,
                 paymentMethod,
+                // OJO: paymentDate se deja con el DEFAULT now() de la
+                // columna a propósito (instante real en UTC) — el frontend
+                // (formatDateTimeMX, OrderDetail_Page) ya asume ese instante
+                // y lo convierte a hora de México solo al mostrarlo.
+                // Guardarlo aquí como hora de pared de México rompería esa
+                // conversión (se vería corrido 2 veces). Ver el comentario en
+                // dashboard.controller.ts sobre cómo se compara "hoy" contra
+                // esta columna sin tocar cómo se guarda.
                 transactionID: transaction.transactionID,
                 clabe: paymentMethod === 'digital' ? destAccountClabe : null,
                 collectedByUserID: req.user?.userID ?? null,
@@ -347,6 +366,8 @@ export async function addPayment(req: Request, res: Response) {
         await PaymentHistory.create({
             paymentAmount: amount,
             paymentMethod,
+            // paymentDate se deja con el DEFAULT now() a propósito — ver
+            // comentario en processTransaction.
             transactionID: transaction.transactionID,
             clabe: paymentMethod === 'digital' ? destAccountClabe : null,
             collectedByUserID: req.user?.userID ?? null,
