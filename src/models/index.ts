@@ -1,6 +1,7 @@
 export * from './cash.model.js';
 export * from './category.model.js';
 export * from './client.model.js';
+export * from './clientProductDiscount.model.js';
 export * from './courier.model.js';
 export * from './destAccount.model.js';
 export * from './emailVerificationToken.model.js';

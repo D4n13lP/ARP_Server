@@ -1,7 +1,7 @@
 // src/controllers/transaction.controller.ts
 import type { Request, Response } from 'express'
 import db from '../config/db.js'
-import { Transaction, Client, TransDetail, Inventory, Product, Warehouse, PaymentHistory, TransDestAcc, TransCourier, TransUser, User, Courier, DestAccount } from '../models/index.js'
+import { Transaction, Client, TransDetail, Inventory, Product, Warehouse, PaymentHistory, TransDestAcc, TransCourier, TransUser, User, Courier, DestAccount, ClientProductDiscount } from '../models/index.js'
 import { toBusinessDateOnly } from '../utils/businessTime.js'
 
 // Include completo para mandar al frontend todo lo que necesitan
@@ -103,6 +103,19 @@ async function processTransaction(req: Request, res: Response, transType: 'sale'
             resolvedClientCode = created.clientCode
         }
 
+        // Descuentos cliente+producto vigentes para el cliente de esta
+        // transacción (ClientsDiscountPage) — si existe uno para el producto
+        // de un renglón, gana sobre lo que haya mandado el frontend
+        // (promoción del producto/categoría, o el descuento tipo 1/2 elegido
+        // a mano): es la regla más específica, y se calcula aquí en el
+        // servidor para que no dependa de que el frontend lo haya mandado bien.
+        const clientProductDiscounts = resolvedClientCode
+            ? await ClientProductDiscount.findAll({ where: { clientCode: resolvedClientCode }, transaction: t })
+            : []
+        const clientDiscountByProdCode = new Map(
+            clientProductDiscounts.map((d) => [d.prodCode, Number(d.discountPercentage) * 100]),
+        )
+
         // Descontar inventario primero: si algo no alcanza, se aborta antes de
         // crear nada más. El precio SIEMPRE se toma del producto en el
         // servidor — nunca se confía en lo que mande el cliente.
@@ -133,7 +146,9 @@ async function processTransaction(req: Request, res: Response, transType: 'sale'
             await invRow.update({ quantity: invRow.quantity - qty }, { transaction: t })
 
             const unitPrice = Number(product?.salePrice ?? 0)
-            const discFraction = Math.min(Math.max(Number(raw.discountPercent) || 0, 0), 100) / 100
+            const clientDiscountPercent = clientDiscountByProdCode.get(invRow.prodCode)
+            const effectiveDiscountPercent = clientDiscountPercent !== undefined ? clientDiscountPercent : (Number(raw.discountPercent) || 0)
+            const discFraction = Math.min(Math.max(effectiveDiscountPercent, 0), 100) / 100
             const lineSubtotal = unitPrice * qty * (1 - discFraction)
             itemsTotal += lineSubtotal
 

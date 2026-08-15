@@ -27,9 +27,6 @@ export class Client extends Model {
   @Column({ type: DataType.STRING(150) })
   declare email: string;
 
-  @Column({ type: DataType.DECIMAL(5,4), defaultValue: 0 })
-  declare discountPercentage: number;
-
   @HasMany(() => Transaction)
   declare transactions?: Transaction[];
 

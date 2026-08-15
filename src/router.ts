@@ -4,6 +4,7 @@ import authRoutes from './routes/auth.routes.js'
 import cashRoutes from './routes/cash.routes.js'
 import categoryRoutes from './routes/category.routes.js'
 import clientRoutes from './routes/client.routes.js'
+import clientProductDiscountRoutes from './routes/clientProductDiscount.routes.js'
 import courierRoutes from './routes/courier.routes.js'
 import dashboardRoutes from './routes/dashboard.routes.js'
 import destAccountRoutes from './routes/destAccount.routes.js'
@@ -40,6 +41,7 @@ router.use('/api/auth', authRoutes)
 router.use('/api/cash', cashRoutes)
 router.use('/api/categories', categoryRoutes)
 router.use('/api/clients', clientRoutes)
+router.use('/api/client-product-discounts', clientProductDiscountRoutes)
 router.use('/api/couriers', courierRoutes)
 router.use('/api/dashboard', dashboardRoutes)
 router.use('/api/dest-accounts', destAccountRoutes)
