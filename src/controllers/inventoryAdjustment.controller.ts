@@ -13,14 +13,15 @@ export async function createInventoryAdjustment(req: Request, res: Response) {
 
 export async function getInventoryAdjustments(req: Request, res: Response) {
     try {
-        // Sin este include, product/sourceWarehouse/destinationWarehouse siempre
-        // llegaban undefined al frontend — por eso "Historial de ajustes" y
-        // "Historial de transferencias" se veían con celdas vacías.
+        // Sin este include, product/sourceWarehouse/destinationWarehouse/warehouse
+        // siempre llegaban undefined al frontend — por eso "Historial de ajustes"
+        // y "Historial de transferencias" se veían con celdas vacías.
         const items = await InventoryAdjustment.findAll({
             include: [
                 { model: Product, include: [Category] },
                 { model: Warehouse, as: 'sourceWarehouse' },
                 { model: Warehouse, as: 'destinationWarehouse' },
+                { model: Warehouse, as: 'warehouse' },
             ],
             order: [['adjustmentDate', 'DESC']],
         })

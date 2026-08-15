@@ -1,6 +1,29 @@
 // src/controllers/inventory.controller.ts
 import type { Request, Response } from 'express'
+import { QueryTypes } from 'sequelize'
+import db from '../config/db.js'
 import { Inventory, Product, Warehouse, Category, ProductUnit, Picture, Promo, InventoryAdjustment, TransDetail } from '../models/index.js'
+
+// Cuántas unidades de este producto, en ESTE almacén puntual, están
+// comprometidas con pedidos ya registrados pero todavía sin entregar
+// (status "pending") — misma noción que "Pendiente entrega" del listado
+// general de Inventory.tsx, pero para un producto+almacén en el instante
+// del ajuste. Se usa para dejar la foto real de "Pendiente antes" en el
+// historial de ajustes (antes quedaba fijo en 0, nunca se calculaba).
+async function getPendingDeliveryForProductWarehouse(prodCode: string, whID: string | null | undefined): Promise<number> {
+    if (!whID) return 0
+    const [row] = await db.query<{ total: string }>(
+        `SELECT COALESCE(SUM(td."quantity"), 0) AS total
+         FROM "transDetail" td
+         JOIN "transaction" t ON t."transactionID" = td."transactionID"
+         WHERE td."prodCode" = :prodCode
+           AND td."whID" = :whID
+           AND t."transType" = 'order'
+           AND t."status" = 'pending'`,
+        { replacements: { prodCode, whID }, type: QueryTypes.SELECT },
+    )
+    return Number(row?.total) || 0
+}
 
 // El almacén fijo "Pedido especial" (ver warehouse.model.ts) solo puede
 // recibir stock a través del flujo de Orden Especial (createSpecialOrderProduct
@@ -58,9 +81,11 @@ export async function getInventoryById(req: Request, res: Response) {
 }
 
 export async function updateInventory(req: Request, res: Response) {
+    const t = await db.transaction()
     try {
-        const item = await Inventory.findByPk(req.params.inventoryID as string)
+        const item = await Inventory.findByPk(req.params.inventoryID as string, { transaction: t })
         if (!item) {
+            await t.rollback()
             res.status(404).json({ message: 'Inventory no encontrado' })
             return
         }
@@ -69,28 +94,34 @@ export async function updateInventory(req: Request, res: Response) {
         const previousWhID = item.whID
 
         if (typeof req.body.whID === 'string' && req.body.whID !== previousWhID && await isSpecialOrdersWarehouse(req.body.whID)) {
+            await t.rollback()
             res.status(400).json({ message: 'No se puede mover productos manualmente al almacén de Pedidos especiales.' })
             return
         }
 
-        await item.update(req.body)
+        await item.update(req.body, { transaction: t })
 
         // Si la cantidad cambió, deja rastro en el historial de ajustes — así la
         // pestaña "Historial de ajustes" del frontend muestra algo real en vez de
-        // quedar siempre vacía.
+        // quedar siempre vacía. Todo en la misma transacción que item.update():
+        // si este INSERT falla (p. ej. por el CHECK de la tabla), la cantidad
+        // tampoco debe quedar cambiada a medias sin su rastro en el historial.
         if (typeof req.body.quantity === 'number' && req.body.quantity !== previousQuantity) {
             await InventoryAdjustment.create({
                 type: 'adjust',
                 prodCode: item.prodCode,
                 availableBefore: previousQuantity,
-                outstandingDeliveryBefore: 0,
+                outstandingDeliveryBefore: await getPendingDeliveryForProductWarehouse(item.prodCode, previousWhID),
+                // Almacén donde vivía la fila que se ajustó — whID, NO
+                // destinationWarehousewhID (ver comentario en el modelo).
+                whID: previousWhID,
                 quantityTransferred: item.quantity - previousQuantity,
                 // Instante real en UTC a propósito (igual que paymentDate en
                 // transaction.controller.ts) — el frontend (formatDateTimeMX)
                 // ya lo convierte a hora de México solo al mostrarlo.
                 adjustmentDate: new Date(),
                 description: typeof req.body.description === 'string' ? req.body.description : 'Ajuste manual de cantidad',
-            })
+            }, { transaction: t })
         }
 
         // Si cambió de almacén, lo mismo pero en "Historial de transferencias".
@@ -106,11 +137,13 @@ export async function updateInventory(req: Request, res: Response) {
                 // ya lo convierte a hora de México solo al mostrarlo.
                 adjustmentDate: new Date(),
                 description: 'Cambio de almacén',
-            })
+            }, { transaction: t })
         }
 
+        await t.commit()
         res.json(item)
     } catch (error: any) {
+        await t.rollback()
         res.status(400).json({ message: error.message })
     }
 }
@@ -127,28 +160,34 @@ export async function updateInventory(req: Request, res: Response) {
 // ninguna fila de inventario (fila "virtual" en el frontend) — en ese caso
 // solo 'ingresar' tiene sentido, ya que no hay nada que transferir.
 export async function transferInventory(req: Request, res: Response) {
+    const t = await db.transaction()
     try {
         const { prodCode, sourceWhID, destinationWhID, quantity, mode } = req.body
 
         if (!prodCode || !destinationWhID) {
+            await t.rollback()
             res.status(400).json({ message: 'prodCode y destinationWhID son obligatorios' })
             return
         }
         if (mode !== 'transfer' && mode !== 'ingresar') {
+            await t.rollback()
             res.status(400).json({ message: "mode debe ser 'transfer' o 'ingresar'" })
             return
         }
         if (!Number.isInteger(quantity) || quantity < 1) {
+            await t.rollback()
             res.status(400).json({ message: 'quantity debe ser un entero de 1 o más' })
             return
         }
         if (sourceWhID && sourceWhID === destinationWhID) {
+            await t.rollback()
             res.status(400).json({ message: 'El almacén de destino debe ser distinto al de origen' })
             return
         }
         // Ni transferir ni ingresar stock nuevo pueden apuntar al almacén de
         // Pedidos especiales — solo el flujo de Orden Especial puede llenarlo.
         if (await isSpecialOrdersWarehouse(destinationWhID)) {
+            await t.rollback()
             res.status(400).json({ message: 'No se puede transferir ni ingresar stock manualmente al almacén de Pedidos especiales.' })
             return
         }
@@ -156,23 +195,25 @@ export async function transferInventory(req: Request, res: Response) {
         let sourceItem: Inventory | null = null
         if (mode === 'transfer') {
             if (!sourceWhID) {
+                await t.rollback()
                 res.status(400).json({ message: 'No hay almacén de origen del cual transferir' })
                 return
             }
-            sourceItem = await Inventory.findOne({ where: { prodCode, whID: sourceWhID } })
+            sourceItem = await Inventory.findOne({ where: { prodCode, whID: sourceWhID }, transaction: t })
             if (!sourceItem || quantity > sourceItem.quantity) {
+                await t.rollback()
                 res.status(400).json({ message: 'La cantidad excede el stock disponible en el almacén de origen' })
                 return
             }
-            await sourceItem.update({ quantity: sourceItem.quantity - quantity })
+            await sourceItem.update({ quantity: sourceItem.quantity - quantity }, { transaction: t })
         }
 
-        let destItem = await Inventory.findOne({ where: { prodCode, whID: destinationWhID } })
+        let destItem = await Inventory.findOne({ where: { prodCode, whID: destinationWhID }, transaction: t })
         const destBefore = destItem ? destItem.quantity : 0
         if (destItem) {
-            await destItem.update({ quantity: destItem.quantity + quantity })
+            await destItem.update({ quantity: destItem.quantity + quantity }, { transaction: t })
         } else {
-            destItem = await Inventory.create({ prodCode, whID: destinationWhID, quantity })
+            destItem = await Inventory.create({ prodCode, whID: destinationWhID, quantity }, { transaction: t })
         }
 
         if (mode === 'transfer') {
@@ -187,24 +228,29 @@ export async function transferInventory(req: Request, res: Response) {
                 // ya lo convierte a hora de México solo al mostrarlo.
                 adjustmentDate: new Date(),
                 description: 'Transferencia entre almacenes',
-            })
+            }, { transaction: t })
         } else {
             await InventoryAdjustment.create({
                 type: 'adjust',
                 prodCode,
                 availableBefore: destBefore,
-                outstandingDeliveryBefore: 0,
+                outstandingDeliveryBefore: await getPendingDeliveryForProductWarehouse(prodCode, destinationWhID),
+                // whID, NO destinationWarehousewhID (ver comentario en el modelo:
+                // ese campo lo exige NULL el CHECK cuando type='adjust').
+                whID: destinationWhID,
                 quantityTransferred: quantity,
                 // Instante real en UTC a propósito (igual que paymentDate en
                 // transaction.controller.ts) — el frontend (formatDateTimeMX)
                 // ya lo convierte a hora de México solo al mostrarlo.
                 adjustmentDate: new Date(),
                 description: 'Ingreso de stock nuevo',
-            })
+            }, { transaction: t })
         }
 
+        await t.commit()
         res.json({ source: sourceItem, destination: destItem })
     } catch (error: any) {
+        await t.rollback()
         res.status(400).json({ message: error.message })
     }
 }

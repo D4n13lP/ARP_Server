@@ -52,4 +52,18 @@ export class InventoryAdjustment extends Model {
   @BelongsTo(() => Warehouse, { foreignKey: 'destinationWarehousewhID', as: 'destinationWarehouse' })
   declare destinationWarehouse?: Warehouse;
 
+  // Almacén donde ocurrió un ajuste (type='adjust': edición manual de
+  // cantidad o "Ingreso de stock nuevo") — columna aparte de
+  // sourceWarehousewhID/destinationWarehousewhID a propósito: la BD tiene un
+  // CHECK ("inventoryAdjustment_check") que exige que esos dos campos queden
+  // en NULL cuando type='adjust' (son exclusivos de type='transfer', donde sí
+  // se exige que ambos estén llenos). Reutilizarlos para 'adjust' viola ese
+  // CHECK y tumba el INSERT completo.
+  @ForeignKey(() => Warehouse)
+  @Column({ type: DataType.UUID, allowNull: true })
+  declare whID: string;
+
+  @BelongsTo(() => Warehouse, { foreignKey: 'whID', as: 'warehouse' })
+  declare warehouse?: Warehouse;
+
 }
