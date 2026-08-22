@@ -92,11 +92,43 @@ export async function updateInventory(req: Request, res: Response) {
 
         const previousQuantity = item.quantity
         const previousWhID = item.whID
+        const changingWarehouse = typeof req.body.whID === 'string' && req.body.whID !== previousWhID
 
-        if (typeof req.body.whID === 'string' && req.body.whID !== previousWhID && await isSpecialOrdersWarehouse(req.body.whID)) {
+        if (changingWarehouse && await isSpecialOrdersWarehouse(req.body.whID)) {
             await t.rollback()
             res.status(400).json({ message: 'No se puede mover productos manualmente al almacén de Pedidos especiales.' })
             return
+        }
+
+        // Si el almacén destino YA tiene una fila de este mismo producto, no
+        // debe quedar un segundo inventoryID con el mismo (prodCode, whID) —
+        // se suma la cantidad ahí y se borra esta fila, en vez de solo
+        // reasignarle el whID (que dejaría dos filas duplicadas). Mismo
+        // criterio que transferInventory más abajo.
+        if (changingWarehouse) {
+            const existingAtDestination = await Inventory.findOne({
+                where: { prodCode: item.prodCode, whID: req.body.whID },
+                transaction: t,
+            })
+            if (existingAtDestination) {
+                const movedQuantity = typeof req.body.quantity === 'number' ? req.body.quantity : item.quantity
+                await existingAtDestination.update({ quantity: existingAtDestination.quantity + movedQuantity }, { transaction: t })
+                await item.destroy({ transaction: t })
+
+                await InventoryAdjustment.create({
+                    type: 'transfer',
+                    prodCode: item.prodCode,
+                    sourceWarehousewhID: previousWhID,
+                    destinationWarehousewhID: req.body.whID,
+                    quantityTransferred: movedQuantity,
+                    adjustmentDate: new Date(),
+                    description: 'Cambio de almacén (fusionado con inventario ya existente en el destino)',
+                }, { transaction: t })
+
+                await t.commit()
+                res.json(existingAtDestination)
+                return
+            }
         }
 
         await item.update(req.body, { transaction: t })
@@ -208,13 +240,19 @@ export async function transferInventory(req: Request, res: Response) {
             await sourceItem.update({ quantity: sourceItem.quantity - quantity }, { transaction: t })
         }
 
-        let destItem = await Inventory.findOne({ where: { prodCode, whID: destinationWhID }, transaction: t })
-        const destBefore = destItem ? destItem.quantity : 0
-        if (destItem) {
-            await destItem.update({ quantity: destItem.quantity + quantity }, { transaction: t })
-        } else {
-            destItem = await Inventory.create({ prodCode, whID: destinationWhID, quantity }, { transaction: t })
-        }
+        // findOrCreate (no find + create manual): si dos transferencias al mismo
+        // (prodCode, whID) llegan casi al mismo tiempo, un find+create separado
+        // puede dejar dos inventoryID duplicados (ambos ven "no existe" antes de
+        // que el otro inserte). findOrCreate, combinado con el índice único
+        // parcial en (prodCode, whID) de la migración, hace esto atómico: si el
+        // INSERT choca con el constraint, Sequelize reintenta el SELECT solo.
+        const [destItem, destWasCreated] = await Inventory.findOrCreate({
+            where: { prodCode, whID: destinationWhID },
+            defaults: { quantity: 0 },
+            transaction: t,
+        })
+        const destBefore = destWasCreated ? 0 : destItem.quantity
+        await destItem.update({ quantity: destItem.quantity + quantity }, { transaction: t })
 
         if (mode === 'transfer') {
             await InventoryAdjustment.create({
